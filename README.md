@@ -9,6 +9,9 @@
 ![documentation](https://img.shields.io/github/actions/workflow/status/zeutschler/datespanlib/static-site-upload.yml?logo=GitHub&logoColor=979DA4&label=docs&color=A1C547&link=https%3A%2F%2Fzeutschler.github.io%2Fcubedpandas%2F)
 ![codecov](https://codecov.io/github/Zeutschler/datespanlib/graph/badge.svg?token=B12O0B6F10)
 
+**UNDER CONSTRUCTION** - The DateSpanLib library is under active development and in a pre-alpha state, not 
+suitable for production use and even testing. The library is expected to be released in a first alpha version
+in the next weeks.
 
 -----------------
 A Python library for handling and using data and time spans. 
