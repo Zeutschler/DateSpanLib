@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from dateutil.parser import parserinfo
 
-import datespanlib.parser.loader
 from datespanlib.date_span import DateSpan
 from datespanlib.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
 __version__ = "0.1.0"
 __license__ = "MIT"
+VERSION = __version__
+
 __all__ = [
     "DateSpanSet",
     "DateSpan",
-    "parse"
+    "parse",
+    "VERSION"
 ]
-
 
 def parse(datespan_text: str, language:str | None = "en", parser_info: parserinfo | None = None) -> DateSpanSet:
     """
