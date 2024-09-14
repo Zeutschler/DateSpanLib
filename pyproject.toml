@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datespanlib"
+description = "A library for handling date spans."
+keywords = ['python', 'datetime', 'timespan', 'pandas', 'numpy', 'spark', 'data analysis', 'sql', 'dataframe', ]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+readme = "README.md"
+dynamic = ["version"]
+license = {file = "LICENSE"}
+requires-python = ">= 3.10"
+authors = [
+  {name = "Thomas Zeutschler"},
+  {email = "cubedpandas@gmail.com"},
+]
+maintainers = [
+    {name = "Thomas Zeutschler", email="cubedpandas@gmail.com"},
+]
+dependencies = [
+    "python-dateutil"
+]
+
+[project.urls]
+Homepage = "https://github.com/Zeutschler/DateSpanLib"
+Documentation = "https://github.com/Zeutschler/DateSpanLib"
+Repository = "https://github.com/Zeutschler/DateSpanLib.git"
+Issues = "https://github.com/Zeutschler/DateSpanLib/issues"
+Changelog = "https://github.com/Zeutschler/DateSpanLib/CHANGELOG.md"
+pypi = "https://pypi.org/project/datespanlib/"
+
+[tool.setuptools.dynamic]
+version = {attr = "datespanlib.__version__"}
