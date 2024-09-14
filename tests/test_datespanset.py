@@ -1,12 +1,12 @@
 from unittest import TestCase
-from datetime import date, datetime
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from dateutil.parser import parse
 
-from datespanlib import DateSpanSet, DateSpan, parse
-from datespanlib.parser.tokenizer import Tokenizer, Token, TokenType
+from datespanlib.date_span_set import DateSpanSet
+from datespanlib.parser.tokenizer import Tokenizer
+
 
 class TestDateTextParser(TestCase):
     def setUp(self):
