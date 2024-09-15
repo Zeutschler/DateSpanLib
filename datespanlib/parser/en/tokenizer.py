@@ -58,6 +58,7 @@ class TokenSubType(IntEnum):
 
     DELIMITER = 1  # e.g. ',' >>> "Monday, Tuesday" or ';' >>> "Monday; Tuesday"
 
+    MICROSECOND = 9  # e.g. 'μs', 'microsecond', 'microseconds' >>> "5 μs"
     MILLISECOND = 10  # e.g. 'ms', 'millisecond', 'milliseconds' >>> "5 milliseconds"
     SECOND = 11  # e.g. 's', 'sec', 'secs', 'second', 'seconds' >>> "5 seconds"
     MINUTE = 12  # e.g. 'm', 'min', 'mins', 'minute', 'minutes' >>> "5 minutes"
@@ -108,6 +109,18 @@ ALIASES_ = {
     'dec': 'december',
 
     # postfixes
+    'μs': 'microsecond',
+    'microsec': 'microsecond',
+    'microsecs': 'microsecond',
+    'microsecond': 'microsecond',
+    'microseconds': 'microsecond',
+
+    'ms': 'millisecond',
+    'millisec': 'millisecond',
+    'millisecs': 'millisecond',
+    'millisecond': 'millisecond',
+    'milliseconds': 'millisecond',
+
     's': 'second',
     'sec': 'second',
     'secs': 'second',
@@ -231,6 +244,8 @@ KEYWORDS = {
     "december": ['december', 12, TokenType.MONTH, TokenSubType.UNDEFINED],
 
     # postfixes
+    "microsecond": ['second', None, TokenType.POSTFIX, TokenSubType.MICROSECOND],
+    "millisecond": ['second', None, TokenType.POSTFIX, TokenSubType.MILLISECOND],
     "second": ['second', None, TokenType.POSTFIX, TokenSubType.SECOND],
     "minute": ['minute', None, TokenType.POSTFIX, TokenSubType.MINUTE],
     "hour": ['hour', None, TokenType.POSTFIX, TokenSubType.HOUR],
@@ -561,7 +576,7 @@ class Tokenizer:
             if text.isdigit():
                 number = int(text)
                 if 1900 <= number <= 2100:
-                    tokens.append(Token(text, TokenType.YEAR, value=number))
+                    tokens.append(Token(text, TokenType.YEAR, TokenSubType.YEAR,  value=number))
                 else:
                     tokens.append(Token(text, TokenType.NUMBER, value=number))
                 continue

@@ -35,7 +35,7 @@ class DateSpanSet:
             ValueError: If the language is not supported or the text cannot be parsed.
         """
         # super().__init__()
-        self._spans: list[DateSpan] = []   # The internal list of date spans objects.
+        self._spans: list[DateSpan] = []
         self._definition: str | None = definition
         self._parser_info: parserinfo | None = parser_info
 
@@ -53,11 +53,11 @@ class DateSpanSet:
             self._parse(definition, parser_info)
 
     # Magic Methods
-    def __iter__(self):
+    def __iter__(self) -> DateSpanSet:
         self._iter_index = -1
         return self
 
-    def __next__(self):  # Python 2: def next(self)
+    def __next__(self) -> DateSpan:  # Python 2: def next(self)
         self._iter_index += 1
         if self._iter_index < len(self._spans):
             return self._spans[self._iter_index]
@@ -66,7 +66,7 @@ class DateSpanSet:
     def __len__(self):
         return len(self._spans)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> DateSpan:
         return self._spans[item]
 
     def __str__(self):
@@ -89,6 +89,13 @@ class DateSpanSet:
                 if span != other._spans[i]:
                     return False
             return True
+        if isinstance(other, DateSpan):
+            if len(self._spans) == 1:
+                return self._spans[0] == other
+            return False
+        if isinstance(other, str):
+            return self == DateSpanSet(other)
+
         return False
 
     def __ne__(self, other) -> bool:

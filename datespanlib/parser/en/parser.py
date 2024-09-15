@@ -286,10 +286,15 @@ class DateTextParser(DateTextLanguageParser):
                 ec.offset = token.value
 
             elif token.type == TT.POSTFIX:
+                # Dates
                 if token.sub_type == TST.MONTH:
                     ec.datespan = DateSpan.today().full_month()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(months=ec.offset)
+                elif token.sub_type == TST.DAY:
+                    ec.datespan = DateSpan.today().full_day()
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(days=ec.offset)
                 elif token.sub_type == TST.WEEK:
                     ec.datespan = DateSpan.today().full_week()
                     if ec.offset is not None:
@@ -302,6 +307,43 @@ class DateTextParser(DateTextLanguageParser):
                     ec.datespan = DateSpan.today().full_year()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(years=ec.offset)
+                #times
+                elif token.sub_type == TST.HOUR:
+                    ec.datespan = DateSpan.today().full_hour()
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(hours=ec.offset)
+                elif token.sub_type == TST.MINUTE:
+                    ec.datespan = DateSpan.today().full_minute()
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(minutes=ec.offset)
+                elif token.sub_type == TST.SECOND:
+                    ec.datespan = DateSpan.today().full_second()
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(seconds=ec.offset)
+                elif token.sub_type == TST.MILLISECOND:
+                    ec.datespan = DateSpan.today().full_millisecond()
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(microseconds=ec.offset * 1000)
+                elif token.sub_type == TST.MICROSECOND:
+                    ec.datespan = DateSpan(datetime.now())
+                    if ec.offset is not None:
+                        ec.datespan = ec.datespan.shift(microseconds=ec.offset)
+
+            elif token.type == TT.DATE_TIME_RANGE:
+                if token.sub_type == TST.YEAR:
+                    ec.datespan = DateSpan(datetime(token.value, 1, 1)).full_year()
+                    ec.year = token.value
+                elif token.sub_type == TST.MONTH:
+                    ec.datespan = DateSpan(datetime(token.value, 1, 1)).full_month()
+                    ec.month = token.value
+                # elif token.sub_type == TST.WEEK:
+                #     pass #ec.datespan = DateSpan.full_week()
+                # elif token.sub_type == TST.QUARTER:
+                #     ec.datespan = DateSpan(datetime(token.value, 1, 1)).full_month()
+                #     ec.quarter = token.value
+                else:
+                    self._message = f"Token type {token.type} = '{token.text}' is not yet supported."
+                    return False, []
 
             else:
                 self._message = f"Token type {token.type} = '{token.text}' is not yet supported."

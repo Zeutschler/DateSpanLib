@@ -101,6 +101,8 @@ class TestParserEn(TestCase):
 
         dtp = DateTextParser()
         texts = [
+            ("2024", DateSpan(datetime(2024, 1, 1)).full_year()),
+            ("March", DateSpan(datetime(datetime.now().year, 3, 1)).full_month()),
             ("Jan 2024", DateSpan(datetime(2024, 1, 1)).full_month()),
             ("last month", DateSpan(datetime.now()).full_month().shift(months=-1)),
             ("previous month", DateSpan(datetime.now()).full_month().shift(months=-1)),

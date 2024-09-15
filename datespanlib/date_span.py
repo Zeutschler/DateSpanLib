@@ -196,6 +196,13 @@ class DateSpan:
             elif len(parts) == 1:
                 return ds.full_hour()
         return ds
+    def full_millisecond(self) -> DateSpan:
+        """
+        Returns a new DateSpan with the start and end date set to the beginning and end of the respective millisecond(s).
+        """
+        musec = int(self._start.microsecond // 1000 * 1000)
+        return DateSpan(self._start.replace(microsecond=musec),
+                        self._end.replace(microsecond=musec + 999))
 
     def full_second(self) -> DateSpan:
         """
