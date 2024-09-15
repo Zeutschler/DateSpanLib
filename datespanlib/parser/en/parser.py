@@ -309,23 +309,23 @@ class DateTextParser(DateTextLanguageParser):
                         ec.datespan = ec.datespan.shift(years=ec.offset)
                 #times
                 elif token.sub_type == TST.HOUR:
-                    ec.datespan = DateSpan.today().full_hour()
+                    ec.datespan = DateSpan.now().full_hour()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(hours=ec.offset)
                 elif token.sub_type == TST.MINUTE:
-                    ec.datespan = DateSpan.today().full_minute()
+                    ec.datespan = DateSpan.now().full_minute()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(minutes=ec.offset)
                 elif token.sub_type == TST.SECOND:
-                    ec.datespan = DateSpan.today().full_second()
+                    ec.datespan = DateSpan.now().full_second()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(seconds=ec.offset)
                 elif token.sub_type == TST.MILLISECOND:
-                    ec.datespan = DateSpan.today().full_millisecond()
+                    ec.datespan = DateSpan.now().full_millisecond()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(microseconds=ec.offset * 1000)
                 elif token.sub_type == TST.MICROSECOND:
-                    ec.datespan = DateSpan(datetime.now())
+                    ec.datespan = DateSpan.now()
                     if ec.offset is not None:
                         ec.datespan = ec.datespan.shift(microseconds=ec.offset)
 
