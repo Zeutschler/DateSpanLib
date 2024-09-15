@@ -1,3 +1,5 @@
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+import sys
 from unittest import TestCase
 from datetime import date, datetime, time, timedelta
 from dateutil.parser import parse
@@ -11,16 +13,9 @@ class TestDateSpan(TestCase):
 
     @staticmethod
     def is_debug():
-        import sys
+        """Check if the debugger is active. Used to print debug information."""
         gettrace = getattr(sys, 'gettrace', None)
-        if gettrace is None:
-            return False
-        else:
-            v = gettrace()
-            if v is None:
-                return False
-            else:
-                return True
+        return (gettrace() is not None) if (gettrace is not None) else False
 
     def test_initialization(self):
         dt1 = datetime(2024, 9, 9)

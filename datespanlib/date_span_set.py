@@ -1,7 +1,7 @@
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 from __future__ import annotations
-
 from typing import Any
-
 import uuid
 from datetime import datetime
 from dateutil.parser import parserinfo
@@ -35,7 +35,7 @@ class DateSpanSet:
             ValueError: If the language is not supported or the text cannot be parsed.
         """
         # super().__init__()
-        self._spans: list[DateSpan] = []   # The internal list of date spans objects.
+        self._spans: list[DateSpan] = []
         self._definition: str | None = definition
         self._parser_info: parserinfo | None = parser_info
 
@@ -53,11 +53,11 @@ class DateSpanSet:
             self._parse(definition, parser_info)
 
     # Magic Methods
-    def __iter__(self):
+    def __iter__(self) -> DateSpanSet:
         self._iter_index = -1
         return self
 
-    def __next__(self):  # Python 2: def next(self)
+    def __next__(self) -> DateSpan:  # Python 2: def next(self)
         self._iter_index += 1
         if self._iter_index < len(self._spans):
             return self._spans[self._iter_index]
@@ -66,7 +66,7 @@ class DateSpanSet:
     def __len__(self):
         return len(self._spans)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> DateSpan:
         return self._spans[item]
 
     def __str__(self):
@@ -89,6 +89,13 @@ class DateSpanSet:
                 if span != other._spans[i]:
                     return False
             return True
+        if isinstance(other, DateSpan):
+            if len(self._spans) == 1:
+                return self._spans[0] == other
+            return False
+        if isinstance(other, str):
+            return self == DateSpanSet(other)
+
         return False
 
     def __ne__(self, other) -> bool:
@@ -209,7 +216,7 @@ class DateSpanSet:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text.
 
             Examples:
-                >>> DateSpanSet.parse('last month')  # if today would be in February 2024
+                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
         return cls(definition=datespan_text, language=language, parser_info=parser_info)
@@ -229,7 +236,7 @@ class DateSpanSet:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text or None.
 
             Examples:
-                >>> DateSpanSet.parse('last month')  # if today would be in February 2024
+                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
         try:
@@ -405,12 +412,14 @@ class DateSpanSet:
         """ Returns a list of tuples with start and end dates of all DateSpan objects in the DateSpanSet."""
         return [(ds.start, ds.end) for ds in self._spans]
 
-    def filter(self, data: Any, return_mask:bool = False, return_index:bool=False) -> Any:
+    def filter(self, data: Any, column:str | None = None, return_mask:bool = False, return_index:bool=False) -> Any:
         """
         Filters the given data object, e.g. a Pandas DataFrame or Series, based on the date spans of the DateSpanSet.
 
         Arguments:
             data: The data object to filter, e.g. a Pandas DataFrame or Series.
+            column: (optional) The name of the column in the DataFrame to filter.
+                If None, the data object itself will be filtered.
             return_mask: (optional) If True, a boolean mask will be returned instead of the filtered data.
             return_index: (optional) If True, the index of the filtered data will be returned.
 
@@ -433,11 +442,24 @@ class DateSpanSet:
         class_name = f"{data.__class__.__module__}.{data.__class__.__qualname__}"
         match class_name:
             case "pandas.core.frame.DataFrame":
-                return self.to_df_lambda(data)
-            case "pandas.core.series.Series":
-                return self.to_df_lambda()(data)
+                if column is None:
+                    raise ValueError("A column name must be provided to filter a Pandas DataFrame.")
+                mask  = self.to_df_lambda()(data[column])
+                if return_mask:
+                    return mask
+                elif return_index:
+                    return data[mask].index.to_numpy()
+                return data[mask]
 
-        return data
+            case "pandas.core.series.Series":
+                mask =  self.to_df_lambda()(data)
+                if return_mask:
+                    return mask
+                elif return_index:
+                    return data[mask].index.to_numpy()
+                return data[mask]
+            case _:
+                raise ValueError(f"Objects of type '{class_name}' are not yet supported for filtering.")
     # endregion
 
 
@@ -486,7 +508,7 @@ class DateSpanSet:
         self._message = None
         self._spans.clear()
         try:
-            ds: DateSpan | list[DateSpan] = self._parser.parse(text, parser_info)
+            ds: DateSpan | list[DateSpan] = self._parser.evaluate(text, parser_info)
             if isinstance(ds, DateSpan):
                 self._spans.append(ds)
             else:

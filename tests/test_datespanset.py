@@ -1,11 +1,13 @@
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+
+import sys
 from unittest import TestCase
 from datetime import datetime
-
 import numpy as np
 import pandas as pd
 
 from datespanlib.date_span_set import DateSpanSet
-from datespanlib.parser.tokenizer import Tokenizer
+from datespanlib.parser.en.tokenizer import Tokenizer
 
 
 class TestDateTextParser(TestCase):
@@ -14,16 +16,9 @@ class TestDateTextParser(TestCase):
 
     @staticmethod
     def is_debug():
-        import sys
+        """Check if the debugger is active. Used to print debug information."""
         gettrace = getattr(sys, 'gettrace', None)
-        if gettrace is None:
-            return False
-        else:
-            v = gettrace()
-            if v is None:
-                return False
-            else:
-                return True
+        return (gettrace() is not None) if (gettrace is not None) else False
 
     def test_initial_parse_using_dateutil(self):
         text = "2024-09-09"
