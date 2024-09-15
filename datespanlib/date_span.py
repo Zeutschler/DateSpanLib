@@ -254,9 +254,9 @@ class DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective quarter(s).
         """
-        start = self._start.replace(month=(self._start.month // 3) * 3, day=1, hour=0, minute=0, second=0,
+        start = self._start.replace(month=(self._start.month // 3 - 1) * 3 + 1, day=1, hour=0, minute=0, second=0,
                                     microsecond=0)
-        end = self._end.replace(month=(self._end.month // 3) * 3 + 1, day=1, hour=23, minute=59, second=59,
+        end = self._end.replace(month=(self._end.month // 3 - 1) * 3 + 1, day=1, hour=23, minute=59, second=59,
                                 microsecond=999999) + relativedelta(months=3, days=-1)
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))

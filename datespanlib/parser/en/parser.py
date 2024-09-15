@@ -288,45 +288,45 @@ class DateTextParser(DateTextLanguageParser):
             elif token.type == TT.POSTFIX:
                 # Dates
                 if token.sub_type == TST.MONTH:
-                    ec.datespan = DateSpan.today().full_month()
-                    if ec.offset is not None:
+                    ec.datespan = DateSpan.now().full_month()
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(months=ec.offset)
                 elif token.sub_type == TST.DAY:
-                    ec.datespan = DateSpan.today().full_day()
-                    if ec.offset is not None:
+                    ec.datespan = DateSpan.now().full_day()
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(days=ec.offset)
                 elif token.sub_type == TST.WEEK:
-                    ec.datespan = DateSpan.today().full_week()
-                    if ec.offset is not None:
+                    ec.datespan = DateSpan.now().full_week()
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(weeks=ec.offset)
                 elif token.sub_type == TST.QUARTER:
-                    ec.datespan = DateSpan.today().full_quarter()
-                    if ec.offset is not None:
+                    ec.datespan = DateSpan.now().full_quarter()
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(months=ec.offset * 3)
                 elif token.sub_type == TST.YEAR:
                     ec.datespan = DateSpan.today().full_year()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(years=ec.offset)
                 #times
                 elif token.sub_type == TST.HOUR:
                     ec.datespan = DateSpan.now().full_hour()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(hours=ec.offset)
                 elif token.sub_type == TST.MINUTE:
                     ec.datespan = DateSpan.now().full_minute()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(minutes=ec.offset)
                 elif token.sub_type == TST.SECOND:
                     ec.datespan = DateSpan.now().full_second()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(seconds=ec.offset)
                 elif token.sub_type == TST.MILLISECOND:
                     ec.datespan = DateSpan.now().full_millisecond()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(microseconds=ec.offset * 1000)
                 elif token.sub_type == TST.MICROSECOND:
                     ec.datespan = DateSpan.now()
-                    if ec.offset is not None:
+                    if ec.offset is not None and ec.offset != 0:
                         ec.datespan = ec.datespan.shift(microseconds=ec.offset)
 
             elif token.type == TT.DATE_TIME_RANGE:

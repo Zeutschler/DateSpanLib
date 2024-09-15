@@ -101,7 +101,8 @@ class TestParserEn(TestCase):
 
         dtp = DateTextParser()
         texts = [
-            ("this minute", DateSpan(datetime(2024, 1, 1)).full_year()),
+            ("this quarter", DateSpan.now().full_quarter()),
+            ("this minute", DateSpan.now().full_minute()),
             ("2024", DateSpan(datetime(2024, 1, 1)).full_year()),
             ("March", DateSpan(datetime(datetime.now().year, 3, 1)).full_month()),
             ("Jan 2024", DateSpan(datetime(2024, 1, 1)).full_month()),
@@ -124,3 +125,4 @@ class TestParserEn(TestCase):
                     print(f"\t{token}")
                 print(f"\tvalue := {ds_a}")
             self.assertTrue(ds_a == b)
+            a = 23
