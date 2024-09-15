@@ -3,7 +3,6 @@
 from __future__ import annotations
 from datetime import datetime, time, timedelta
 from dateutil.relativedelta import relativedelta
-from pydantic_core.core_schema import none_schema
 
 
 class DateSpan:
