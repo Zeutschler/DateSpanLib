@@ -1,12 +1,15 @@
-import sys
-import pathlib
-
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# ------------------------------------------------------------------------------------------------
 # Provides methods to load language specific parsers
-# --------------------------------------------------
+# ------------------------------------------------------------------------------------------------
 # Language parsers need to be located in respective subfolders of the "datespanlib/parser" folder,
 # e.g. "datespanlib/parser/en" for English language parser. Within this folder, the parser class
 # named "DateTextParser" needs to be declared in the respective __init__.py file.
 # Please refer the "en" parser implementation for further details
+
+import sys
+import pathlib
+
 
 language_parsers = {}  # available language parsers
 

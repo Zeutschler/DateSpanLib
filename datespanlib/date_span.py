@@ -1,6 +1,9 @@
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 from __future__ import annotations
 from datetime import datetime, time, timedelta
 from dateutil.relativedelta import relativedelta
+from pydantic_core.core_schema import none_schema
 
 
 class DateSpan:
@@ -12,9 +15,11 @@ class DateSpan:
     """
     TIME_EPSILON_MICROSECONDS = 1000  # 1 millisecond
 
-    def __init__(self, start: datetime | None, end: datetime | None = None):
+    def __init__(self, start: datetime | None = None, end: datetime | None = None, message: str | None = None):
         self._start: datetime | None = start
         self._end: datetime | None = end if end is not None else start
+        self._message: str | None = message
+
 
     @classmethod
     def now(cls) -> DateSpan:
@@ -31,6 +36,11 @@ class DateSpan:
     def undefined(cls) -> DateSpan:
         """Returns an empty / undefined DateSpan."""
         return DateSpan(None, None)
+
+    @property
+    def message(self) -> str | None:
+        """Returns the message of the DateSpan."""
+        return self._message
 
     @property
     def is_undefined(self) -> bool:
@@ -164,14 +174,29 @@ class DateSpan:
         # overlap at the end
         return DateSpan(self._start, other._start - timedelta(microseconds=1))
 
-    def with_time(self, time: datetime | time) -> DateSpan:
+    def with_time(self, time: datetime | time, text:str | None = None) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the given date and time.
+        If text is provided, the DateSpan will be adjusted to the time span specified in the text,
+        e.g. "10:23:45" will set the DateSpan to the full second of the given time.
+             "10:23" will set the DateSpan to the full minute of the given time.
         """
         start = self._start.replace(hour=time.hour, minute=time.minute, second=time.second,
                                     microsecond=time.microsecond)
         end = self._end.replace(hour=time.hour, minute=time.minute, second=time.second, microsecond=time.microsecond)
-        return DateSpan(start, end)
+        ds = DateSpan(start, end)
+        if text is not None:
+            parts = text.split(":")
+            if len(parts) == 3:
+                if "." in parts[2]:
+                    return ds
+                else:
+                    return ds.full_second()
+            elif len(parts) == 2:
+                return ds.full_minute()
+            elif len(parts) == 1:
+                return ds.full_hour()
+        return ds
 
     def full_second(self) -> DateSpan:
         """
@@ -486,7 +511,10 @@ class DateSpan:
         return not (self._start is None and self._end is None)
 
     def __str__(self):
-        self.__repr__()
+        if self.is_undefined:
+            return "DateSpan(undefined)"
+        return (f"DateSpan({self._start.strftime('%a %Y-%m-%d %H:%M:%S')} <-> "
+                f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S')})")
 
     def __repr__(self):
         if self.is_undefined:

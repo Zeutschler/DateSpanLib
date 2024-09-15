@@ -1,3 +1,7 @@
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# ----------------------------------------------------------------------------
+# A simple example using DateSpanLib with pandas
+
 from datetime import datetime
 import pandas as pd
 from datespanlib import DateSpanSet, DateSpan, parse
@@ -11,12 +15,27 @@ df = pd.DataFrame.from_dict({
 })
 
 # create a DateSpanSet
-spans = DateSpanSet("June")
-print(spans)
+dss = DateSpanSet("June 2024")
+print(dss)
 
-# filer the DataFrame using the DateSpanSet
-filtered_df = spans.filter(df["date"], return_mask=False)
-print(filtered_df)
+# filter the DataFrame using the DateSpanSet
+filtered = dss.filter(df, "date")
+print("Filtered dataframe:")
+print(filtered)
+
+# filter a specific column/series using the DateSpanSet
+filtered = dss.filter(df["date"])
+print("\nFiltered series 'date':")
+print(filtered)
+
+mask = dss.filter(df["date"], return_mask=True)
+print("\nMask for filter:")
+print(mask)
+
+print("\nIndexes of filtered rows:")
+index = dss.filter(df["date"], return_index=True)
+print(index)
+
 
 
 

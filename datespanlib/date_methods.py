@@ -1,14 +1,16 @@
-from datetime import datetime
+# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# ----------------------------------------------------------------------------
+# Language agnostic date time functions to resolve date- and time-related text
 
 import pandas as pd
+from datetime import datetime
 from dateutil.relativedelta import MO
 from dateutil.relativedelta import relativedelta
 
 from datespanlib.date_span import DateSpan
 
 
-# DateText Methods to resolve date- and time-related text
-# shared methods to be used by all languages
+
 
 # region helper methods
 
