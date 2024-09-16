@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from datespanlib.date_span_set import DateSpanSet
-from datespanlib.parser.en.tokenizer import Tokenizer
+from datespanlib.parser_old.en.tokenizer import Tokenizer
 
 
 class TestDateTextParser(TestCase):
@@ -32,7 +32,8 @@ class TestDateTextParser(TestCase):
         self.assertEqual(result[0][1], datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999))
 
     def test_single_word_month(self):
-        words = ["today", "yesterday", "tomorrow", "week", "month", "quarter", "year", "ytd", "mtd", "qtd", "wtd",
+        other_words =["month", "quarter", "year", "week"]
+        words = ["today", "yesterday", "tomorrow",  "ytd", "mtd", "qtd", "wtd",
                  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
                  "january", "february", "march", "april", "may", "june",
                  "july", "august", "september", "october", "november", "december",
@@ -47,17 +48,17 @@ class TestDateTextParser(TestCase):
 
     def test_to_function(self):
 
-        df = DateSpanSet("today")
-        sql = df.to_sql("order date")
-        f_func = df.to_function()
-        f_lambda = df.to_lambda()
-        f_numpy = df.to_df_lambda()
+        dss = DateSpanSet("today")
+        sql = dss.to_sql("order date")
+        f_func = dss.to_function()
+        f_lambda = dss.to_lambda()
+        f_numpy = dss.to_df_lambda()
         n_array = np.array([datetime.now() for _ in range(100)], dtype=np.datetime64)
-        df = pd.DataFrame(n_array, columns=["order date"])
+        dss = pd.DataFrame(n_array, columns=["order date"])
 
         self.assertEqual(f_func(datetime.now()), True)
         self.assertEqual(f_lambda(datetime.now()), True)
-        result = f_numpy(df["order date"])
+        result = f_numpy(dss["order date"])
         self.assertEqual(result.index.to_list(), [i for i in range(100)])
 
 

@@ -5,8 +5,8 @@ from unittest import TestCase
 
 from datespanlib import DateSpan
 from datespanlib.date_span_set import DateSpanSet
-from datespanlib.parser.en.tokenizer import Tokenizer, Token, TokenType as TT, TokenSubType as TST, TokenList
-from datespanlib.parser.en.parser import DateTextParser
+from datespanlib.parser_old.en.tokenizer import Tokenizer, Token, TokenType as TT, TokenSubType as TST, TokenList
+from datespanlib.parser_old.en.parser import DateTextParser
 
 
 class TestParserEn(TestCase):

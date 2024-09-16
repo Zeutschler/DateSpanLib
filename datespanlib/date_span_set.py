@@ -6,9 +6,8 @@ import uuid
 from datetime import datetime
 from dateutil.parser import parserinfo
 
-from datespanlib.parser.base_parser import DateTextLanguageParser
+from datespanlib.parser.datespanparser import DateSpanParser
 from datespanlib.date_span import DateSpan
-import datespanlib.parser.loader as loader
 
 
 class DateSpanSet:
@@ -28,29 +27,20 @@ class DateSpanSet:
             language: (optional) An ISO 639-1 2-digit language code for the language of the text to parse.
                 Default language is 'en' for English.
 
-            parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing dates contained
-                datespan_text. If not defined, the default parser of the dateutil library will be used.
+            parser_info: (optional) A dateutil.parser_old.parserinfo instance to use for parsing dates contained
+                datespan_text. If not defined, the default parser_old of the dateutil library will be used.
 
         Errors:
             ValueError: If the language is not supported or the text cannot be parsed.
         """
-        # super().__init__()
         self._spans: list[DateSpan] = []
         self._definition: str | None = definition
         self._parser_info: parserinfo | None = parser_info
-
-        # set and load language
-        if not loader.language_parsers:
-            loader.load_language_parsers()
-        self._language: str | None = language.lower().strip() if isinstance(language, str) else "en"
-        if self._language not in loader.language_parsers:
-            raise ValueError(f"Date span text parsing for language '{language}' is not supported. "
-                             f"The respective parser could not be loaded or instantiated.")
-        self._parser: DateTextLanguageParser | None = loader.language_parsers[language]
+        self._parser: DateSpanParser = DateSpanParser(self._definition)
 
         self._iter_index = 0
         if definition is not None:
-            self._parse(definition, parser_info)
+            self._parse()
 
     # Magic Methods
     def __iter__(self) -> DateSpanSet:
@@ -144,17 +134,6 @@ class DateSpanSet:
         return self.clone()
     # endregion
 
-    # region Public Properties and Methods
-    @property
-    def available_languages(self) -> list[str]:
-        """ Returns a list of available languages for parsing date, time or date span texts."""
-        return list(loader.language_parsers.keys())
-
-    @property
-    def language(self) -> str:
-        """ Returns the ISO 639-1 language 2-difit code of the parser, e.g. 'en' for English."""
-        return self._parser.language
-
     @property
     def start(self) -> datetime | None:
         """Returns the start date of the first DateSpan object in the set."""
@@ -209,14 +188,14 @@ class DateSpanSet:
             Arguments:
                 datespan_text: The date span text to parse, e.g. 'last month', 'next 3 days', 'yesterday' or 'Jan 2024'.
                 language: (optional) An ISO 639-1 2-digit compliant language code for the language of the text to parse.
-                parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing dates contained
-                    datespan_text. If not defined, the default parser of the dateutil library will be used.
+                parser_info: (optional) A dateutil.parser_old.parserinfo instance to use for parsing dates contained
+                    datespan_text. If not defined, the default parser_old of the dateutil library will be used.
 
             Returns:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text.
 
             Examples:
-                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
+                >>> DateSpanSet.parse('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
         return cls(definition=datespan_text, language=language, parser_info=parser_info)
@@ -229,14 +208,14 @@ class DateSpanSet:
 
             Arguments:
                 datespan_text: The date span text to parse, e.g. 'last month', 'next 3 days', 'yesterday' or 'Jan 2024'.
-                parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing dates contained
-                    datespan_text. If not defined, the default parser of the dateutil library will be used.
+                parser_info: (optional) A dateutil.parser_old.parserinfo instance to use for parsing dates contained
+                    datespan_text. If not defined, the default parser_old of the dateutil library will be used.
 
             Returns:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text or None.
 
             Examples:
-                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
+                >>> a = DateSpanSet.try_parse('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
         try:
@@ -501,19 +480,16 @@ class DateSpanSet:
 
 
     # region Internal Methods
-    def _parse(self, text: str, parser_info: parserinfo | None = None) -> bool:
+    def _parse(self):
         """
         Parses the given text into a set of DateSpan objects.
         """
         self._message = None
         self._spans.clear()
         try:
-            ds: DateSpan | list[DateSpan] = self._parser.evaluate(text, parser_info)
-            if isinstance(ds, DateSpan):
-                self._spans.append(ds)
-            else:
-                self._spans.extend(ds)
-        except ValueError as e:
-            raise e
-        return True
+            expressions = self._parser.parse() # todo: inject self.parser_info
+            for expr in expressions:
+                self._spans.extend([DateSpan(span[0], span[1]) for span in expr])
+        except Exception as e:
+            raise ValueError(str(e))
     # endregion
