@@ -1,6 +1,7 @@
 import re
 
-from parser.errors import ParsingError
+from dateutil import parser as dateutil_parser
+from datespanlib.parser.errors import ParsingError
 
 
 class Lexer:
@@ -135,24 +136,37 @@ class Lexer:
         'qtd': 'qtd',
         'wtd': 'wtd',
 
+        'ltm': 'ltm', # last twelve months
+
+        'py': 'py',  # previous year
+        'cy': 'cy',  # current year
+        'ny': 'ny',  # next year
+        'ly': 'py',  # last year
+
         'q1': 'q1',
         'q2': 'q2',
         'q3': 'q3',
         'q4': 'q4',
 
-        'r3m': 'r3m',
-        'r4m': 'r4m',
-        'r6m': 'r6m'
+        # 'r3m': 'r3m',
+        # 'r4m': 'r4m',
+        # 'r6m': 'r6m'
     }
 
     # Aliases for identifiers
     IDENTIFIER_ALIASES = {
         'last': 'last',
-        'previous': 'last',
+
+        'previous': 'previous', # previous = last
+        'prev': 'previous',  # prev = last
+        'prv': 'previous',  # prev = last
+
         'past': 'past',
+        'rolling': 'rolling',  # rolling = past
 
         'this': 'this',
         'current': 'this',
+        'cur': 'this',
         'actual': 'this',
         'act': 'this',
 
@@ -171,7 +185,9 @@ class Lexer:
         'btw': 'between',
         'btwn': 'between',
 
-        'every': 'every'
+        'every': 'every',
+        'ev': 'every',
+        'each': 'every',
     }
 
     # Include months and days in IDENTIFIER_ALIASES
@@ -183,6 +199,8 @@ class Lexer:
 
     # Regular expression for ordinals like '1st', '2nd', '3rd', '4th'
     ORDINAL_PATTERN = r'\b\d+(?:st|nd|rd|th)\b'
+
+    TRIPLET_PATTERN = r'^[rlpn](1000|[1-9][0-9]{0,2})[yqmwd]$' # r3m, l1q, p2w, n4d
 
     # Regular expression for times, including optional 'am'/'pm', milliseconds, and microseconds
     TIME_PATTERN = (
@@ -196,6 +214,8 @@ class Lexer:
         r'\b\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{1,2}:\d{2}(:\d{2})?(\.\d{1,6})?(?:[+-]\d{2}:\d{2})?(?:\s?[ap]m)?\b'
         r'|'
         r'\b\d{1,2}[./-]\d{1,2}[./-]\d{4}[T ]\d{1,2}:\d{2}(:\d{2})?(\.\d{1,6})?(?:[+-]\d{2}:\d{2})?(?:\s?[ap]m)?\b'
+        r'/(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z))|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d([+-][0-2]\d:[0-5]\d|Z))/'
+        r'/(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/'
     )
 
     DATE_PATTERN = (
@@ -211,7 +231,8 @@ class Lexer:
         ('TIME',        TIME_PATTERN),  # Time strings
         ('ORDINAL',     ORDINAL_PATTERN),  # Ordinal numbers
         ('NUMBER',      r'\b\d+\b'),  # Integer numbers
-        ('SPECIAL',     r'\b(' + '|'.join(re.escape(k) for k in SPECIAL_WORDS_ALIASES.keys()) + r')\b'),  # Special words
+        ('SPECIAL',     r'\b(' + '|'.join(re.escape(k) for k in SPECIAL_WORDS_ALIASES.keys()) + r')\b'), # Special words
+        ('TRIPLET', TRIPLET_PATTERN), # triplet periods, like r3m, r4q, r6y, p2w, n4d
         ('IDENTIFIER',  r'\b(' + '|'.join(re.escape(k) for k in IDENTIFIER_ALIASES.keys()) + r')\b'),  # Identifiers
         ('TIME_UNIT',   r'\b(' + '|'.join(re.escape(k) for k in TIME_UNIT_ALIASES.keys()) + r')\b'),  # Time units
         ('SEMICOLON',   r';'),  # Semicolon to separate statements
@@ -232,17 +253,44 @@ class Lexer:
         """
         Tokenizes the input text into a list of Token objects.
         """
+
+
+
         tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in self.TOKEN_SPECIFICATION)
         get_token = re.compile(tok_regex, re.IGNORECASE).match
         pos = 0  # Current position in the text
         line = 1
         column = 1
+
+        # remove trailing "." from abbreviations from text
+        tokens = []
+        for t in str(self.text).split(" "):
+            if t.endswith(".") and len(t) > 1:
+                if t[-2].isalpha(): # e.g. 'prev.'
+                    t = t[:-1]
+            tokens.append(t)
+        self.text = " ".join(tokens)
+
         text_length = len(self.text)
         while pos < text_length:
             mo = get_token(self.text, pos)
             if mo is not None:
                 kind = mo.lastgroup
                 value = mo.group()
+
+                if kind == 'MISMATCH':
+                    # let's try if the entire text is a datetime
+                    try:
+                        result = dateutil_parser.parse(self.text)
+                        kind = 'DATETIME'
+                        value = self.text
+                        token = self.create_token(kind, value, line, column)
+                        self.tokens = [token]
+                        break
+
+                    except ValueError:
+                        pass
+
                 if kind == 'SKIP':
                     # Handle whitespace and update line and column numbers
                     if '\n' in value:
@@ -254,8 +302,8 @@ class Lexer:
                     continue
                 elif kind == 'MISMATCH':
                     # get full word for meaningful error message
-                    value = re.match(r'\w+', self.text[pos:])
-                    raise ParsingError(f'Unexpected identifier {value!r} at line {line}, column {column}', line, column, value)
+                    word = str(self.text[pos:]).split(" ")[0]
+                    raise ParsingError(f"Unexpected identifier or keyword '{word}'", line, column, word)
                 else:
                     token = self.create_token(kind, value, line, column)
                     self.tokens.append(token)
@@ -264,7 +312,8 @@ class Lexer:
                     column += len(value)
             else:
                 # No match found; raise an error
-                raise RuntimeError(f'Unexpected character {self.text[pos]!r} at line {line}, column {column}')
+                value = self.text[pos]
+                raise ParsingError(f"Unexpected character '{value}'", line, column, value)
         self.tokens.append(Token(TokenType.EOF, line=line, column=column))
 
     def create_token(self, kind, value, line, column):
@@ -282,15 +331,14 @@ class Lexer:
         elif kind == 'ORDINAL':
             return Token(TokenType.ORDINAL, value, line, column)
         elif kind == 'TIME_UNIT':
-            # Map aliases to standard forms
             standard_value = self.TIME_UNIT_ALIASES.get(value, value)
             return Token(TokenType.TIME_UNIT, standard_value, line, column)
         elif kind == 'SPECIAL':
-            # Map aliases to standard forms
             standard_value = self.SPECIAL_WORDS_ALIASES.get(value, value)
             return Token(TokenType.SPECIAL, standard_value, line, column)
+        elif kind == 'TRIPLET':
+            return Token(TokenType.TRIPLET, value, line, column)
         elif kind == 'IDENTIFIER':
-            # Map aliases to standard forms
             standard_value = self.IDENTIFIER_ALIASES.get(value, value)
             return Token(TokenType.IDENTIFIER, standard_value, line, column)
         elif kind == 'SEMICOLON':
@@ -327,6 +375,7 @@ class TokenType:
     TIME_UNIT = 'TIME_UNIT'
     PUNCTUATION = 'PUNCTUATION'
     SPECIAL = 'SPECIAL'
+    TRIPLET = 'ROLLING'
     SEMICOLON = 'SEMICOLON'
     EOF = 'EOF'
     UNKNOWN = 'UNKNOWN'  # For any unrecognized tokens

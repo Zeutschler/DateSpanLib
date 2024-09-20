@@ -76,7 +76,7 @@ setup(
         'python-dateutil',
     ],
     test_suite="datespanlib.tests",
-    packages=['datespanlib', 'datespanlib.parser_old', 'datespanlib.parser_old.en', 'tests'],
+    packages=['datespanlib', 'datespanlib.parser', 'tests'],
     project_urls={
         'Homepage': 'https://github.com/Zeutschler/datespanlib',
         'Documentation': 'https://github.com/Zeutschler/datespanlib',

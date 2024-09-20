@@ -9,7 +9,9 @@ class ParsingError(Exception):
         self.token_value = token_value
 
     def __str__(self):
-        return f"{super().__str__()} (Line: {self.line}, Column: {self.column}, Token: {self.token_value!r})"
+        return f"{super().__str__()} at line: {self.line}, column: {self.column}, token: '{self.token_value}'."
+    def __repr__(self):
+        return self.__str__()
 
 
 class EvaluationError(Exception):
@@ -23,4 +25,6 @@ class EvaluationError(Exception):
         self.token_value = token_value
 
     def __str__(self):
-        return f"{super().__str__()} (Line: {self.line}, Column: {self.column}, Token: {self.token_value!r})"
+        return f"{super().__str__()} at line: {self.line}, column: {self.column}, token: '{self.token_value}'."
+    def __repr__(self):
+        return self.__str__()

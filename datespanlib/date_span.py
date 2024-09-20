@@ -3,6 +3,7 @@
 from __future__ import annotations
 from datetime import datetime, time, timedelta
 from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import MO
 
 
 class DateSpan:
@@ -13,28 +14,17 @@ class DateSpan:
     The DateSpan is immutable, all methods that change the DateSpan will return a new DateSpan.
     """
     TIME_EPSILON_MICROSECONDS = 1000  # 1 millisecond
+    """The time epsilon in microseconds used for comparison of time deltas."""
+    MIN_YEAR = 1700
+    """The minimum year that can be represented by the DateSpan."""
+    MAX_YEAR = 2300
+    """The maximum year that can be represented by the DateSpan."""
 
     def __init__(self, start: datetime | None = None, end: datetime | None = None, message: str | None = None):
         self._start: datetime | None = start
         self._end: datetime | None = end if end is not None else start
+        self._start, self._end = self._swap()
         self._message: str | None = message
-
-
-    @classmethod
-    def now(cls) -> DateSpan:
-        """Returns a new DateSpan with the start and end date set to the current date and time."""
-        now = datetime.now()
-        return DateSpan(now, now)
-
-    @classmethod
-    def today(cls) -> DateSpan:
-        """Returns a new DateSpan with the start and end date set to the current date."""
-        return DateSpan.now().full_day()
-
-    @classmethod
-    def undefined(cls) -> DateSpan:
-        """Returns an empty / undefined DateSpan."""
-        return DateSpan(None, None)
 
     @property
     def message(self) -> str | None:
@@ -102,6 +92,18 @@ class DateSpan:
             return timedelta(microseconds=0) <= delta <= timedelta(microseconds=self.TIME_EPSILON_MICROSECONDS)
         delta = other._start - self._end
         return timedelta(microseconds=0) <= delta <= timedelta(microseconds=self.TIME_EPSILON_MICROSECONDS)
+
+    def almost_equals(self, other: DateSpan, epsilon: int = TIME_EPSILON_MICROSECONDS) -> bool:
+        """
+        Returns True if the DateSpan is almost equal to the given DateSpan.
+        """
+        start_diff = self._start - other._start
+        end_diff = self._end - other._end
+        min = timedelta(microseconds=-epsilon)
+        max = timedelta(microseconds=epsilon)
+
+        return min <= start_diff <= max and min <= end_diff <= max
+
 
     def merge(self, other: DateSpan) -> DateSpan:
         """
@@ -173,7 +175,7 @@ class DateSpan:
         # overlap at the end
         return DateSpan(self._start, other._start - timedelta(microseconds=1))
 
-    def with_time(self, time: datetime | time, text:str | None = None) -> DateSpan:
+    def with_time(self, time: datetime | time, text: str | None = None) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the given date and time.
         If text is provided, the DateSpan will be adjusted to the time span specified in the text,
@@ -196,6 +198,35 @@ class DateSpan:
             elif len(parts) == 1:
                 return ds.full_hour()
         return ds
+
+    def with_start(self, dt: datetime) -> DateSpan:
+        """
+        Returns a new DateSpan with the start date set to the given datetime.
+        """
+        return DateSpan(dt, self._end)
+
+    def with_end(self, dt: datetime) -> DateSpan:
+        """
+        Returns a new DateSpan with the end date set to the given datetime.
+        """
+        return DateSpan(self._start, dt)
+
+    def with_date(self, dt: datetime) -> DateSpan:
+        """
+        Returns a new DateSpan with the start and end date set to the given datetime.
+        """
+        return DateSpan(dt, dt)
+
+    def with_year(self, year: int) -> DateSpan:
+        """
+        Returns a new DateSpan with the start and end date set to the given year.
+        If the actual DateSpan is longer than a year, the start year will be set to the given year
+        and the end year will be adjusted accordingly, e.g. if the DateSpan is from 2024-01-01 to 2025-01-01
+        and the year is set to 2023, the DateSpan will be adjusted to 2023-01-01 to 2024-01-01.
+        """
+        year_diff = self._end.year - self._start.year
+        return DateSpan(self._start.replace(year=year), self._end.replace(year=year + year_diff))
+
     def full_millisecond(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective millisecond(s).
@@ -254,10 +285,12 @@ class DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective quarter(s).
         """
-        start = self._start.replace(month=(self._start.month // 3 - 1) * 3 + 1, day=1, hour=0, minute=0, second=0,
-                                    microsecond=0)
-        end = self._end.replace(month=(self._end.month // 3 - 1) * 3 + 1, day=1, hour=23, minute=59, second=59,
-                                microsecond=999999) + relativedelta(months=3, days=-1)
+        q_start = (self._start.month - 1) // 3 + 1
+        q_end = (self._end.month - 1) // 3 + 1
+        m_start = (q_start - 1) * 3 + 1
+        m_end = q_end * 3
+        start = self._start.replace(month=m_start, day=1)
+        end = self._end.replace(month=m_end, day=1) + relativedelta(months=1, days=-1)
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
@@ -270,41 +303,45 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-    def ytd(self) -> DateSpan:
+    @staticmethod
+    def ltm() -> DateSpan:
+        """
+        Returns a new DateSpan representing the last 12 months. The start date will be set to the first day of the
+        """
+        ds = DateSpan.today().shift_start(years=-1, days=1)
+        return ds
+
+    @staticmethod
+    def ytd() -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the year-to-date.
         """
-        start = self._start.replace(month=1, day=1)
-        end = self._start
-        return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
-                        end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        ds = DateSpan.today()
+        return ds.with_start(ds.full_year().start)
 
-    def mtd(self) -> DateSpan:
+    @staticmethod
+    def mtd() -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the month-to-date.
         """
-        start = self._start.replace(day=1)
-        end = self._start
-        return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
-                        end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        ds = DateSpan.today()
+        return ds.with_start(ds.full_month().start)
 
-    def qtd(self) -> DateSpan:
+    @staticmethod
+    def qtd() -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the quarter-to-date.
         """
-        start = self._start.replace(month=(self._start.month // 3) * 3 + 1, day=1)
-        end = self._start
-        return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
-                        end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        ds = DateSpan.today()
+        return ds.with_start(ds.full_quarter().start)
 
-    def wtd(self) -> DateSpan:
+    @staticmethod
+    def wtd() -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the week-to-date.
         """
-        start = self._start - relativedelta(days=self._start.weekday())
-        end = self._start
-        return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
-                        end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        ds = DateSpan.today()
+        return ds.with_start(ds.full_week()._start)
 
     def _begin_of_day(self, dt: datetime) -> datetime:
         """Returns the beginning of the day for the given datetime."""
@@ -323,12 +360,8 @@ class DateSpan:
         return dt.replace(day=1, hour=23, minute=59, second=59, microsecond=999999) + relativedelta(months=1, days=-1)
 
     def _last_day_of_month(self, dt: datetime) -> datetime:
-        # The day 28 exists in every month. 4 days later, it's always next month
-        next_month = dt.replace(day=28) + timedelta(days=4)
-        # subtracting the number of the current day brings us back one month
-        last_day = next_month - timedelta(days=next_month.day)
-        last_day.replace(hour=23, minute=59, second=59, microsecond=999999)
-        return last_day
+        """Returns the last day of the month for the given datetime."""
+        return dt + relativedelta(day=31)
 
     def _first_day_of_month(self, dt: datetime) -> datetime:
         return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -357,6 +390,9 @@ class DateSpan:
 
     def _swap(self) -> DateSpan:
         """Swap start and end date if start is greater than end."""
+        if self._start is None or self._end is None:
+            return self
+
         if self._start > self._end:
             tmp = self._start
             self._start = self._end
@@ -432,7 +468,7 @@ class DateSpan:
 
     def shift_start(self, years: int = 0, months: int = 0, days: int = 0, hours: int = 0, minutes: int = 0,
                     seconds: int = 0,
-                    microseconds: int = 0, weeks: int = 0):
+                    microseconds: int = 0, weeks: int = 0) -> DateSpan:
         """
         Shifts the start date of the DateSpan by the given +/- time delta.
         """
@@ -442,9 +478,12 @@ class DateSpan:
                                             seconds=seconds, microseconds=microseconds)
         if weeks:
             start += timedelta(weeks=weeks)
+        if abs(start - self._end) <= timedelta(microseconds=self.TIME_EPSILON_MICROSECONDS):
+            return DateSpan(start, start)
+
         result = DateSpan(start, self._end)._swap()
         if result.end - result.start < timedelta(microseconds=self.TIME_EPSILON_MICROSECONDS):
-            return DateSpan.undefined()
+            return DateSpan(result.start, result.start)
         return result
 
     def shift_end(self, years: int = 0, months: int = 0, days: int = 0, hours: int = 0, minutes: int = 0,
@@ -466,8 +505,87 @@ class DateSpan:
             end = self._end_of_month(end)
         result = DateSpan(self._start, end)._swap()
         if result.end - result.start < timedelta(microseconds=self.TIME_EPSILON_MICROSECONDS):
-            return DateSpan.undefined()
+            return DateSpan(result.start, result.start)
         return result
+
+    def set_start(self, year: int | None = None, month: int | None = None, day: int | None = None,
+                  hour: int | None = None, minute: int | None = None, second: int | None = None,
+                  microsecond: int | None = None, ) -> DateSpan:
+        """
+        Sets the start date of the DateSpan to a specific time or date. Only the given fragments will be set.
+        Invalid day values, e.g. set February to 31st, will be automatically adjusted.
+        Raises:
+            ValueError: If the given datetime fragment is out of range.
+        """
+        return DateSpan(self._set(self._start, year, month, day, hour, minute, second, microsecond), self._end)
+
+    def set_end(self, year: int | None = None, month: int | None = None, day: int | None = None,
+                hour: int | None = None, minute: int | None = None, second: int | None = None,
+                microsecond: int | None = None, ) -> DateSpan:
+        """
+        Sets the end date of the DateSpan to a specific time or date. Only the given fragments will be set.
+        Invalid day values, e.g. set February to 31st, will be automatically adjusted.
+        Raises:
+            ValueError: If the given datetime fragment is out of range.
+        """
+        return DateSpan(self._start, self._set(self._end, year, month, day, hour, minute, second, microsecond))
+
+    def set(self, year: int | None = None, month: int | None = None, day: int | None = None,
+            hour: int | None = None, minute: int | None = None, second: int | None = None,
+            microsecond: int | None = None, ) -> DateSpan:
+        """
+        Sets the start and end date of the DateSpan to a specific time or date. Only the given fragments will be set.
+        Invalid day values, e.g. set February to 31st, will be automatically adjusted.
+        Raises:
+            ValueError: If the given datetime fragment is out of range.
+        """
+
+        return DateSpan(self._set(self._start, year, month, day, hour, minute, second, microsecond),
+                        self._set(self._end, year, month, day, hour, minute, second, microsecond))
+
+    def _set(self, dt: datetime, year: int | None = None, month: int | None = None, day: int | None = None,
+             hour: int | None = None, minute: int | None = None, second: int | None = None,
+             microsecond: int | None = None, ) -> datetime | None:
+        """
+        Sets a datetime to a specific time or date. Only the given fragments will be set.
+        Invalid day values, e.g. set February to 31st, will be automatically
+        Raises:
+            ValueError: If the given datetime fragment is out of range.
+        """
+        if dt is None:
+            return dt
+        if year is not None:
+            if not 0 < year < 2100:
+                raise ValueError(f"Invalid year value '{year}'.")
+            dt = dt.replace(year=year)
+        if month is not None:
+            if not 0 < month < 13:
+                raise ValueError(f"Invalid month value '{month}'.")
+            dt = dt.replace(month=month)
+        if day is not None:
+            if not 0 < day < 32:
+                raise ValueError(f"Invalid day value '{day}'.")
+            last_day = DateSpan(self._start).full_month()._end.day
+            if day > last_day:
+                day = last_day
+            dt = dt.replace(day=day)
+        if hour is not None:
+            if not 0 <= hour < 24:
+                raise ValueError(f"Invalid hour value '{hour}'.")
+            dt = dt.replace(hour=hour)
+        if minute is not None:
+            if not 0 <= minute < 60:
+                raise ValueError(f"Invalid minute value '{minute}'.")
+            dt = dt.replace(minute=minute)
+        if second is not None:
+            if not 0 <= second < 60:
+                raise ValueError(f"Invalid second value '{second}'.")
+            dt = dt.replace(second=second)
+        if microsecond is not None:
+            if not 0 <= microsecond < 1000000:
+                raise ValueError(f"Invalid microsecond value '{microsecond}'.")
+            dt = dt.replace(microsecond=microsecond)
+        return dt
 
     @property
     def timedelta(self) -> timedelta:
@@ -489,19 +607,164 @@ class DateSpan:
         """
         return self._start, self._end
 
+    def to_tuple_list(self) -> list[tuple[datetime, datetime]]:
+        """
+        Returns the start and end date of the DateSpan as a list containing a single tuple.
+        """
+        return [(self._start, self._end), ]
+
+
+    # region Static Days, Month and other calculations
+    @classmethod
+    def now(cls) -> DateSpan:
+        """Returns a new DateSpan with the start and end date set to the current date and time."""
+        now = datetime.now()
+        return DateSpan(now, now)
+
+    @classmethod
+    def today(cls) -> DateSpan:
+        """Returns a new DateSpan with the start and end date set to the current date."""
+        return DateSpan.now().full_day()
+
+    @classmethod
+    def yesterday(cls) -> DateSpan:
+        """Returns a new DateSpan with the start and end date set to yesterday."""
+        return DateSpan.now().shift(days=-1).full_day()
+
+    @classmethod
+    def tomorrow(cls) -> DateSpan:
+        """Returns a new DateSpan with the start and end date set to tomorrow."""
+        return DateSpan.now().shift(days=1).full_day()
+
+    @classmethod
+    def undefined(cls) -> DateSpan:
+        """Returns an empty / undefined DateSpan."""
+        return DateSpan(None, None)
+
+    @classmethod
+    def _monday(cls, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0, offset_days: int = 0) -> DateSpan:
+        # Monday is 0 and Sunday is 6
+        dtv = datetime.now() + relativedelta(weekday=MO(-1), years=offset_years,
+                                             months=offset_months, days=offset_days, weeks=offset_weeks)
+        return DateSpan(dtv).full_day()
+
+    @classmethod
+    def monday(cls):
+        """Returns a full day DateSpan for the current weeks Monday."""
+        return cls._monday()
+
+    @classmethod
+    def tuesday(cls):
+        """Returns a full day DateSpan for the current weeks Tuesday."""
+        return cls._monday().shift(days=1)
+
+    @classmethod
+    def wednesday(cls):
+        """Returns a full day DateSpan for the current weeks Wednesday."""
+        return cls._monday().shift(days=2)
+
+    @classmethod
+    def thursday(cls):
+        """Returns a full day DateSpan for the current weeks Thursday."""
+        return cls._monday().shift(days=3)
+
+    @classmethod
+    def friday(cls):
+        """Returns a full day DateSpan for the current weeks Friday."""
+        return cls._monday().shift(days=4)
+
+    @classmethod
+    def saturday(cls):
+        """Returns a full day DateSpan for the current weeks Saturday."""
+        return cls._monday().shift(days=5)
+
+    @classmethod
+    def sunday(cls):
+        """Returns a full day DateSpan for the current weeks Sunday."""
+        return cls._monday().shift(days=6)
+
+    @classmethod
+    def january(cls):
+        """Returns a full month DateSpan for January of the current year."""
+        return DateSpan.now().replace(month=2).full_month()
+
+    @classmethod
+    def february(cls):
+        """Returns a full month DateSpan for February of the current year."""
+        return DateSpan.now().replace(month=2).full_month()
+
+    @classmethod
+    def march(cls):
+        """Returns a full month DateSpan for March of the current year."""
+        return DateSpan.now().replace(month=3).full_month()
+
+    @classmethod
+    def april(cls):
+        """Returns a full month DateSpan for April of the current year."""
+        return DateSpan.now().replace(month=4).full_month()
+
+    @classmethod
+    def may(cls):
+        """Returns a full month DateSpan for May of the current year."""
+        return DateSpan.now().replace(month=5).full_month()
+
+    @classmethod
+    def june(cls):
+        """Returns a full month DateSpan for June of the current year."""
+        return DateSpan.now().replace(month=6).full_month()
+
+    @classmethod
+    def july(cls):
+        """Returns a full month DateSpan for July of the current year."""
+        return DateSpan.now().replace(month=7).full_month()
+
+    @classmethod
+    def august(cls):
+        """Returns a full month DateSpan for August of the current year."""
+        return DateSpan.now().replace(month=8).full_month()
+
+    @classmethod
+    def september(cls):
+        """Returns a full month DateSpan for September of the current year."""
+        return DateSpan.now().replace(month=9).full_month()
+
+    @classmethod
+    def october(cls):
+        """Returns a full month DateSpan for October of the current year."""
+        return DateSpan.now().replace(month=10).full_month()
+
+    @classmethod
+    def november(cls):
+        """Returns a full month DateSpan for November of the current year."""
+        return DateSpan.now().replace(month=11).full_month()
+
+    @classmethod
+    def december(cls):
+        """Returns a full month DateSpan for December of the current year."""
+        return DateSpan.now().replace(month=12).full_month()
+
+    # endregion
+
+    # region magic methods
     def __add__(self, other):
         if isinstance(other, timedelta):
             return DateSpan(self._start + other, self._end + other)
         if isinstance(other, DateSpan):
             return self.merge(other)
-        return NotImplemented
+        raise ValueError(f"Add object of type '{type(other).__name__}' "
+                         f"to 'DateSpan' object is not supported. "
+                         f"Only types timedelta and DateSpan are supported. "
+                         f"Use 'shift', 'set' or 'merge' methods instead.")
 
     def __sub__(self, other):
         if isinstance(other, timedelta):
             return DateSpan(self._start - other, self._end - other)
         if isinstance(other, DateSpan):
             return self.subtract(other)
-        return NotImplemented
+        raise ValueError(f"Subtract object of type '{type(other).__name__}' "
+                         f"from 'DateSpan' object is not supported. "
+                         f"Only types timedelta and DateSpan are supported. "
+                         f"Use 'shift', 'set' or 'intersect' methods instead.")
 
     def __contains__(self, item):
         if isinstance(item, datetime):
@@ -519,20 +782,36 @@ class DateSpan:
     def __str__(self):
         if self.is_undefined:
             return "DateSpan(undefined)"
-        return (f"DateSpan({self._start.strftime('%a %Y-%m-%d %H:%M:%S')} <-> "
-                f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S')})")
+
+        if self._start.microsecond != 0:
+            start = f"{self._start.strftime('%a %Y-%m-%d %H:%M:%S.%f')}"
+        else:
+            start = f"{self._start.strftime('%a %Y-%m-%d %H:%M:%S')}"
+
+        if self._end.microsecond != 0:
+            end = f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S.%f')})"
+        else:
+            end = f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S')})"
+        return (f"DateSpan({start} <-> {end})")
 
     def __repr__(self):
-        if self.is_undefined:
-            return "DateSpan(undefined)"
-        return (f"DateSpan({self._start.strftime('%a %Y-%m-%d %H:%M:%S')} <-> "
-                f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S')})")
+        return self.__str__()
 
     def __eq__(self, other):
         if other is None:
             return self._start is None and self._end is None
         if isinstance(other, DateSpan):
-            return self.start == other.start and self.end == other.end
+            if self.is_undefined and other.is_undefined:
+                return True
+            if self.is_undefined or other.is_undefined:
+                return False
+
+            if self.start.tzinfo is not None and other.start.tzinfo is not None:
+                return self.start == other.start and self.end == other.end
+            if self.start.tzinfo is None and other.start.tzinfo is None:
+                return self.start == other.start and self.end == other.end
+            return self.start.replace(tzinfo=None) == other.start.replace(tzinfo=None) and self.end.replace(
+                tzinfo=None) == other.end.replace(tzinfo=None)
         if isinstance(other, datetime):
             return self.start == other and self.end == other
         if isinstance(other, tuple):
@@ -554,6 +833,18 @@ class DateSpan:
             return self.start > other and self.end > other
         return False
 
+    def __ge__(self, other):
+        if isinstance(other, DateSpan):
+            return self.start >= other.start and self.end >= other.end
+        if isinstance(other, datetime):
+            return self.start >= other and self.end >= other
+        if isinstance(other, tuple):
+            return self.start >= other[0] and self.end >= other[1]
+        if isinstance(other, float):
+            other = datetime.fromtimestamp(other)
+            return self.start >= other and self.end >= other
+        return False
+
     def __lt__(self, other):
         if isinstance(other, DateSpan):
             return self.start < other.start and self.end < other.end
@@ -566,5 +857,18 @@ class DateSpan:
             return self.start < other and self.end < other
         return False
 
+    def __le__(self, other):
+        if isinstance(other, DateSpan):
+            return self.start <= other.start and self.end <= other.end
+        if isinstance(other, datetime):
+            return self.start <= other and self.end <= other
+        if isinstance(other, tuple):
+            return self.start <= other[0] and self.end <= other[1]
+        if isinstance(other, float):
+            other = datetime.fromtimestamp(other)
+            return self.start <= other and self.end <= other
+        return False
+
     def __hash__(self):
         return hash((self._start, self._end))
+    # endregion

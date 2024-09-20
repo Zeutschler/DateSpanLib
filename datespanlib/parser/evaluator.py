@@ -2,13 +2,13 @@ import re
 from datetime import datetime, time, timedelta
 
 import dateutil.parser
-from PIL.TiffTags import lookup
 from dateutil.relativedelta import relativedelta
 
-import datespanlib.date_methods as dtm
-from parser.errors import EvaluationError, ParsingError
-from parser.lexer import Token, TokenType, Lexer
-from parser.parser import Parser
+from datespanlib.parser import MIN_YEAR, MAX_YEAR
+from datespanlib.parser.errors import EvaluationError, ParsingError
+from datespanlib.parser.lexer import Token, TokenType, Lexer
+from datespanlib.parser.parser import Parser
+from datespanlib.date_span import DateSpan
 
 
 class Evaluator:
@@ -50,6 +50,8 @@ class Evaluator:
             return self.evaluate_relative(node.value['tokens'])
         elif node_type == 'special':
             return self.evaluate_special(node.value['value'])
+        elif node_type == 'triplet':
+            return self.evaluate_triplet(node.value['value'])
         elif node_type == 'months':
             return self.evaluate_months(node.value['tokens'])
         elif node_type == 'days':
@@ -68,6 +70,7 @@ class Evaluator:
         """
         Evaluates a specific date string and returns the corresponding date span.
         """
+
         try:
             try:
                 date = dateutil.parser.parse(date_str)
@@ -75,13 +78,33 @@ class Evaluator:
                 # Parse the date string, allowing fuzzy parsing for complex formats
                 date = dateutil.parser.parse(date_str, fuzzy=True, fuzzy_with_tokens=False)
         except ValueError:
-            raise EvaluationError(f'Invalid date format: {date_str}')
+            raise EvaluationError(f"Invalid date '{date_str}'.")
         start = date
         end = date
         if date.time() == time(0, 0):
             # If time is not specified, set the span to cover the entire day
             start = datetime.combine(date.date(), time.min)
             end = datetime.combine(date.date(), time.max)
+        elif ":" in date_str:
+            if "t" in date_str:
+                time_str = date_str.split("t")[1]
+            else:
+                time_str = date_str
+            contains_time_zone = time_str.count('+') == 1 or time_str.count('-') == 1
+            if contains_time_zone:
+                time_str = time_str.split('+')[0].split('-')[0]
+
+            defines_minutes_only = (time_str.count(':') == 1)  # e.g., '12:30'
+            if defines_minutes_only:
+                # If only hours and minutes are specified, set the span to cover the entire minute
+                start = datetime.combine(date.date(), date.time())
+                end = start + timedelta(minutes=1, microseconds=-1)
+            elif date.microsecond == 0:
+                # If seconds are specified, set the span to cover the entire second
+                start = datetime.combine(date.date(), date.time())
+                end = start + timedelta(seconds=1, microseconds=-1)
+
+
         return [(start, end)]
 
     def evaluate_range(self, start_tokens, end_tokens):
@@ -253,14 +276,18 @@ class Evaluator:
         ordinal = None
         while idx < len(tokens):
             token = tokens[idx]
-            if token.type == TokenType.IDENTIFIER and token.value in ['last', 'past']:
-                direction = 'last'
+            if token.type == TokenType.IDENTIFIER and token.value in ['past', 'rolling']:
+                direction = 'rolling'
+            if token.type == TokenType.IDENTIFIER and token.value in ['last', 'previous']:
+                direction = 'previous'
             elif token.type == TokenType.IDENTIFIER and token.value == 'next':
                 direction = 'next'
             elif token.type == TokenType.IDENTIFIER and token.value == 'this':
                 direction = 'this'
             elif token.type == TokenType.NUMBER:
                 number = token.value
+                if MIN_YEAR <= number <= MAX_YEAR:
+                    unit = 'year'
             elif token.type == TokenType.ORDINAL:
                 ordinal = self.ordinal_to_int(token.value)
             elif token.type == TokenType.TIME_UNIT:
@@ -276,18 +303,23 @@ class Evaluator:
                 else:
                     return self.evaluate_special(token.value)
             idx += 1
-        if direction == 'last':
-            return self.calculate_past(number, unit)
-        elif direction == 'next':
+
+
+        if direction == 'previous': # incl. 'last'
+            return self.calculate_previous(number, unit)
+        if direction == 'rolling': # incl. 'past'
+            return self.calculate_rolling(number, unit)
+        if direction == 'next':
             return self.calculate_future(number, unit)
-        elif direction == 'this':
+        if direction == 'this':
             return self.calculate_this(unit)
-        elif ordinal is not None:
+
+        if ordinal is not None:
             # Handle expressions like '1st Monday'
             return self.calculate_nth_weekday_in_period(ordinal, unit)
-        elif direction == 'rolling':
-            return self.calculate_past(number, unit)
-        else:
+        else: # direction = None
+            if unit in ['day', 'week', 'month', 'year', 'quarter']:
+                return self.calculate_this(unit)
             return []
 
     def evaluate_special(self, value):
@@ -295,69 +327,80 @@ class Evaluator:
         Evaluates a special date expression and returns the corresponding date span.
         """
         if value == 'yesterday':
-            date = self.today - timedelta(days=1)
-            start = datetime.combine(date.date(), time.min)
-            end = datetime.combine(date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.yesterday().to_tuple_list()
         elif value == 'today':
-            date = self.today
-            start = datetime.combine(date.date(), time.min)
-            end = datetime.combine(date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.today().to_tuple_list()
         elif value == 'tomorrow':
-            date = self.today + timedelta(days=1)
-            start = datetime.combine(date.date(), time.min)
-            end = datetime.combine(date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.tomorrow().to_tuple_list()
         elif value == 'now':
-            # Return the exact current time
-            now = datetime.now()
-            return [(now, now)]
+            return DateSpan.now().to_tuple_list()
+        elif value == 'ltm':
+            return DateSpan.ltm().to_tuple_list()
         elif value == 'ytd':
-            # Year-to-date: from the beginning of the year to today
-            from_date = datetime(self.today.year, 1, 1)
-            start = datetime.combine(from_date.date(), time.min)
-            end = datetime.combine(self.today.date(), time.max)
-            return [(start, end)]
+            return DateSpan.ytd().to_tuple_list()
         elif value == 'qtd':
-            # Quarter-to-date: from the beginning of the quarter to today
-            quarter = (self.today.month - 1) // 3 + 1
-            from_month = 3 * (quarter - 1) + 1
-            from_date = datetime(self.today.year, from_month, 1)
-            start = datetime.combine(from_date.date(), time.min)
-            end = datetime.combine(self.today.date(), time.max)
-            return [(start, end)]
+            return DateSpan.qtd().to_tuple_list()
         elif value == 'mtd':
-            # Month-to-date: from the beginning of the month to today
-            from_date = datetime(self.today.year, self.today.month, 1)
-            start = datetime.combine(from_date.date(), time.min)
-            end = datetime.combine(self.today.date(), time.max)
-            return [(start, end)]
+            return DateSpan.mtd().to_tuple_list()
         elif value == 'wtd':
-            # week-to-date: from the beginning of the month to today
-            start = dtm.actual_week().start
-            end = datetime.combine(self.today.date(), time.max)
-            return [(start, end)]
+            return DateSpan.wtd().to_tuple_list()
+
+        # catch the following single words as specials
+        elif value == 'week':
+            return DateSpan.now().full_week().to_tuple_list()
+        elif value == 'month':
+            return DateSpan.now().full_month().to_tuple_list()
+        elif value == 'year':
+            return DateSpan.now().full_year().to_tuple_list()
+        elif value == 'quarter':
+            return DateSpan.now().full_quarter().to_tuple_list()
+        elif value == 'hour':
+            return DateSpan.now().full_hour().to_tuple_list()
+        elif value == 'minute':
+            return DateSpan.now().full_minute().to_tuple_list()
+        elif value == 'second':
+            return DateSpan.now().full_second().to_tuple_list()
+        elif value == 'millisecond':
+            return DateSpan.now().full_millisecond().to_tuple_list()
+
 
         elif value in ['q1', 'q2', 'q3', 'q4']:
             # Specific quarter
-            year = self.today.year
+            year = DateSpan.now().start.year
             quarter = int(value[1])
-            from_month = 3 * (quarter - 1) + 1
-            from_date = datetime(year, from_month, 1)
-            to_date = from_date + relativedelta(months=3, days=-1)
-            start = datetime.combine(from_date.date(), time.min)
-            end = datetime.combine(to_date.date(), time.max)
-            return [(start, end)]
-        elif value.startswith('r') and value[-1] in ['d', 'w', 'm', 'y'] and value[1:-1].isdigit():
-            # Rolling periods like 'R3M' (last 3 months)
-            number = int(value[1:-1])
-            unit_char = value[-1]
-            unit_map = {'d': 'day', 'w': 'week', 'm': 'month', 'y': 'year'}
-            unit = unit_map[unit_char]
-            return self.calculate_past(number, unit)
+            month = 3 * (quarter - 1) + 1
+            return DateSpan(datetime(year= year, month=month, day=1)).full_quarter().to_tuple_list()
+        elif value == 'py':
+            return DateSpan.now().shift(years=-1).full_year().to_tuple_list()
+        elif value == 'cy':
+            return DateSpan.now().full_year().to_tuple_list()
+        elif value == 'ny':
+            return DateSpan.now().shift(years=1).full_year().to_tuple_list()
+        elif value == 'ly':
+            return DateSpan.now().shift(years=-1).full_year().to_tuple_list()
         else:
             return []
+
+    def evaluate_triplet(self, triplet:str):
+
+        if not ((triplet[0] in ['r', 'p', 'l', 'n']) and
+                (triplet[-1] in ['d', 'w', 'm', 'q', 'y']) and
+                (triplet[1:-1].isdigit())):
+            raise EvaluationError(f"Invalid triplet '{triplet}'")
+
+        relative = triplet[0]
+        number = int(triplet[1:-1])
+        unit_char = triplet[-1]
+        unit_map = {'d': 'day', 'w': 'week', 'm': 'month', 'q': 'quarter', 'y': 'year'}
+        unit = unit_map[unit_char]
+        if relative in ['r']:
+            return self.calculate_rolling(number, unit)
+        elif relative  in ['l', 'p']:
+            return self.calculate_previous(number, unit)
+        elif relative == 'n':
+            return self.calculate_future(number, unit)
+
+
 
     def evaluate_months(self, tokens):
         """
@@ -389,7 +432,7 @@ class Evaluator:
 
     def evaluate_days(self, tokens):
         """
-        Evaluates a list of days, possibly with a month year, and returns the corresponding date spans.
+        Evaluates a list of days, possibly with a month and year, and returns the corresponding date spans.
         """
         days = []
         # Check if the last token is a number (year)
@@ -405,90 +448,117 @@ class Evaluator:
                 days.append(day_full_name)
             idx += 1
         date_spans = []
-        lookups = {"monday": dtm.monday, "tuesday": dtm.tuesday, "wednesday": dtm.wednesday, "thursday": dtm.thursday,
-                     "friday": dtm.friday, "saturday": dtm.saturday, "sunday": dtm.sunday}
+        lookups = {"monday": DateSpan.monday, "tuesday": DateSpan.tuesday, "wednesday": DateSpan.wednesday,
+                   "thursday": DateSpan.thursday, "friday": DateSpan.friday, "saturday": DateSpan.saturday,
+                   "sunday": DateSpan.sunday}
         for day_name in days:
             span = lookups[day_name]()
             date_spans.append((span.start, span.end))
         return date_spans
 
-    def calculate_past(self, number, unit):
+    def calculate_rolling(self, number, unit):
         """
-        Calculates a past date range based on the specified number and unit.
+        Calculates the rolling period(s) based on the specified number and unit, e.g.
+        'rolling 3 months': Refers to a rolling 3-month window, starting from today’s date.
+        Note: Rolling and past are synonyms.
         """
-        if unit == 'day':
-            from_date = self.today - timedelta(days=number)
-        elif unit == 'week':
-            from_date = self.today - timedelta(weeks=number)
-        elif unit == 'month':
-            from_date = self.today - relativedelta(months=number)
+        if unit == 'month': # most used units first
+            return DateSpan.now().shift_start(months=-number).to_tuple_list()
         elif unit == 'year':
-            from_date = self.today - relativedelta(years=number)
+            return DateSpan.now().shift_start(years=-number).to_tuple_list()
+        elif unit == 'quarter':
+            return DateSpan.now().shift_start(months=-number * 3).to_tuple_list()
+        elif unit == 'week':
+            return DateSpan.now().shift(weeks=-1).full_week().shift_start(weeks=number - 1).to_tuple_list()
+        elif unit == 'day':
+            return DateSpan.now().shift_start(days=-number).to_tuple_list()
+        elif unit == 'hour':
+            return DateSpan.now().shift_start(hours=-number).to_tuple_list()
+        elif unit == 'minute':
+            return DateSpan.now().shift_start(minutes=-number).to_tuple_list()
+        elif unit == 'second':
+            return DateSpan.now().shift_start(seconds=-number).to_tuple_list()
+        elif unit == 'millisecond':
+            return DateSpan.now().shift_start(microseconds=-number * 1000).to_tuple_list()
         else:
             return []
-        start = datetime.combine(from_date.date(), time.min)
-        end = datetime.combine(self.today.date(), time.max)
-        return [(start, end)]
+
+    def calculate_previous(self, number, unit):
+        """
+        Calculates the previous period(s) based on the specified number and unit, e.g.
+        'previous 3 months': Refers to the full 3 calendar months immediately before the current month.
+        Note: Previous and last are synonyms.
+        """
+        if unit == 'month': # most used units first
+            return DateSpan.today().shift(months=-1).full_month().shift_start(months=-(number - 1)).to_tuple_list()
+        elif unit == 'year':
+            return DateSpan.today().shift(years=-1).full_year().shift_start(years=-(number - 1)).to_tuple_list()
+        elif unit == 'quarter':
+            return DateSpan.today().shift(months=-3).full_quarter().shift_start(months=-(number - 1) * 3).to_tuple_list()
+        elif unit == 'week':
+            return DateSpan.today().shift(weeks=-1).full_week().shift_start(weeks=-(number - 1)).to_tuple_list()
+        elif unit == 'day':
+            return DateSpan.yesterday().shift_start(days=-(number - 1)).to_tuple_list()
+        elif unit == 'hour':
+            return DateSpan.now().shift(hours=-1).full_hour().shift_start(hours=-(number - 1)).to_tuple_list()
+        elif unit == 'minute':
+            return DateSpan.now().shift(minutes=-1).full_minute().shift_start(minutes=-(number - 1)).to_tuple_list()
+        elif unit == 'second':
+            return DateSpan.now().shift(seconds=-1).full_second().shift_start(seconds=-(number - 1)).to_tuple_list()
+        elif unit == 'millisecond':
+            return DateSpan.now().shift(microseconds=-1000).full_millisecond().shift_start(microseconds=-(number - 1) * 1000).to_tuple_list()
+        else:
+            return []
+
 
     def calculate_future(self, number, unit):
         """
         Calculates a future date range based on the specified number and unit.
         """
         if unit == 'day':
-            to_date = self.today + timedelta(days=number)
+            return DateSpan.today().shift(days=1).shift_end(days=(number - 1)).to_tuple_list()
         elif unit == 'week':
-            to_date = self.today + timedelta(weeks=number)
+            return DateSpan.today().shift(weeks=1).full_week().shift_end(weeks=(number - 1)).to_tuple_list()
         elif unit == 'month':
-            to_date = self.today + relativedelta(months=number)
+            return DateSpan.today().shift(months=1).full_month().shift_end(months=(number - 1)).to_tuple_list()
         elif unit == 'year':
-            to_date = self.today + relativedelta(years=number)
+            return DateSpan.today().shift(years=1).full_year().shift_end(years=(number - 1)).to_tuple_list()
         elif unit == 'quarter':
-            to_date = self.today + relativedelta(months=3 * number)
+            return DateSpan.today().shift(months=3).full_quarter().shift_end(months=(number - 1)*3).to_tuple_list()
+        elif unit == 'hour':
+            return DateSpan.now().shift(hours=1).full_hour().shift_end(hours=number - 1).to_tuple_list()
+        elif unit == 'minute':
+            return DateSpan.now().shift(minutes=1).full_minute().shift_end(minutes=number - 1).to_tuple_list()
+        elif unit == 'second':
+            return DateSpan.now().shift(seconds=1).full_second().shift_end(seconds=number - 1).to_tuple_list()
+        elif unit == 'millisecond':
+            return DateSpan.now().shift(microseconds=1000).full_millisecond().shift_end(microseconds=(number - 1) * 1000).to_tuple_list()
         else:
             return []
-        start = datetime.combine(self.today.date(), time.min)
-        end = datetime.combine(to_date.date(), time.max)
-        return [(start, end)]
+
 
     def calculate_this(self, unit):
         """
         Calculates the date range for the current period specified by the unit (day, week, month, year, quarter).
         """
         if unit == 'day':
-            date = self.today
-            start = datetime.combine(date.date(), time.min)
-            end = datetime.combine(date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.now().full_day().to_tuple_list()
         elif unit == 'week':
-            # Calculate the start and end of the current week (Monday to Sunday)
-            start_date = self.today - timedelta(days=self.today.weekday())
-            end_date = start_date + timedelta(days=6)
-            start = datetime.combine(start_date.date(), time.min)
-            end = datetime.combine(end_date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.now().full_week().to_tuple_list()
         elif unit == 'month':
-            # Start and end of the current month
-            start_date = datetime(self.today.year, self.today.month, 1)
-            end_date = start_date + relativedelta(months=1, days=-1)
-            start = datetime.combine(start_date.date(), time.min)
-            end = datetime.combine(end_date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.now().full_month().to_tuple_list()
         elif unit == 'year':
-            # Start and end of the current year
-            start_date = datetime(self.today.year, 1, 1)
-            end_date = datetime(self.today.year, 12, 31)
-            start = datetime.combine(start_date.date(), time.min)
-            end = datetime.combine(end_date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.now().full_year().to_tuple_list()
         elif unit == 'quarter':
-            # Start and end of the current quarter
-            quarter = (self.today.month - 1) // 3 + 1
-            from_month = 3 * (quarter - 1) + 1
-            start_date = datetime(self.today.year, from_month, 1)
-            end_date = start_date + relativedelta(months=3, days=-1)
-            start = datetime.combine(start_date.date(), time.min)
-            end = datetime.combine(end_date.date(), time.max)
-            return [(start, end)]
+            return DateSpan.now().full_quarter().to_tuple_list()
+        elif unit == 'hour':
+            return DateSpan.now().full_hour().to_tuple_list()
+        elif unit == 'minute':
+            return DateSpan.now().full_minute().to_tuple_list()
+        elif unit == 'second':
+            return DateSpan.now().full_second().to_tuple_list()
+        elif unit == 'millisecond':
+            return DateSpan.now().full_millisecond().to_tuple_list()
         else:
             return []
 
@@ -506,7 +576,7 @@ class Evaluator:
         weekday_num = self.today.weekday()
 
         # Use dateutil.relativedelta to find the nth weekday
-        nth_weekday_date = period_start + relativedelta(day=1, weekday=weekday_num(n))
+        nth_weekday_date = period_start + relativedelta(day=1, weekday=weekday_num)
 
         if period_start <= nth_weekday_date <= period_end:
             start = datetime.combine(nth_weekday_date.date(), time.min)

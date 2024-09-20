@@ -1,5 +1,5 @@
-from parser.errors import ParsingError
-from parser.lexer import Token, TokenType, Lexer
+from datespanlib.parser.errors import ParsingError
+from datespanlib.parser.lexer import Token, TokenType, Lexer
 
 
 class ASTNode:
@@ -9,7 +9,7 @@ class ASTNode:
     pass
 
 
-class DateSpan(ASTNode):
+class DateSpanNode(ASTNode):
     """
     Represents a date span node in the AST, which can be a specific date, relative period, or range.
     """
@@ -43,7 +43,7 @@ class Parser:
             self.advance()
         else:
             raise ParsingError(
-                f'Unexpected token {self.current_token.value!r}. Expected token type {token_type}.',
+                f"Unexpected token {self.current_token.value!r}. Expected token type '{token_type}'",
                 self.current_token.line,
                 self.current_token.column,
                 self.current_token.value
@@ -100,7 +100,7 @@ class Parser:
         if self.current_token.type == TokenType.IDENTIFIER:
             if self.current_token.value == 'every':
                 return self.iterative_date_span()
-            elif self.current_token.value in ['last', 'next', 'past', 'this']:
+            elif self.current_token.value in ['last', 'next', 'past', 'this', 'previous', 'rolling']:
                 return self.relative_date_span()
             elif self.current_token.value == 'since':
                 return self.since_date_span()
@@ -122,9 +122,19 @@ class Parser:
 
         elif self.current_token.type == TokenType.SPECIAL:
             return self.special_date_span()
+        elif self.current_token.type == TokenType.TRIPLET:
+            return self.triplet_date_span()
         elif self.current_token.type in [TokenType.DATE, TokenType.DATETIME]:
             return self.specific_date_span()
+        elif self.current_token.type in [TokenType.TIME]:
+            return self.specific_time_span()
         elif self.current_token.type == TokenType.NUMBER or self.current_token.type == TokenType.ORDINAL:
+            return self.relative_date_span()
+        elif self.current_token.type == TokenType.TIME_UNIT:
+            if len(self.tokens) <=2 and self.tokens[-1].type == TokenType.EOF:
+                # single word month, quarter, year, week, hour, minute, second or millisecond, handle as specials
+                self.current_token.type = TokenType.SPECIAL
+                return self.special_date_span()
             return self.relative_date_span()
         else:
             raise ParsingError(
@@ -175,7 +185,7 @@ class Parser:
                    self.current_token.type == TokenType.SEMICOLON):
             period_tokens.append(self.current_token)
             self.eat(self.current_token.type)
-        return DateSpan({'type': 'iterative', 'tokens': tokens, 'period_tokens': period_tokens})
+        return DateSpanNode({'type': 'iterative', 'tokens': tokens, 'period_tokens': period_tokens})
 
     def specific_date_span(self):
         """
@@ -189,7 +199,17 @@ class Parser:
             time_value = self.current_token.value
             self.eat(TokenType.TIME)
             date_value += ' ' + time_value  # Combine date and time
-        return DateSpan({'type': 'specific_date', 'date': date_value})
+        return DateSpanNode({'type': 'specific_date', 'date': date_value})
+
+    def specific_time_span(self):
+        """
+        Parses a specific date, possibly with time, and returns a DateSpan node.
+        """
+        time_value = self.current_token.value
+        token_type = self.current_token.type
+        self.eat(token_type)
+        return DateSpanNode({'type': 'specific_date', 'date': time_value})
+
 
     def date_range(self):
         """
@@ -207,7 +227,7 @@ class Parser:
             self.eat(TokenType.IDENTIFIER)
         else:
             raise ParsingError(
-                f"Expected 'and' or 'to', got {self.current_token.value!r}",
+                f"Expected 'and' or 'to', got '{self.current_token.value!r}'",
                 self.current_token.line,
                 self.current_token.column,
                 self.current_token.value
@@ -220,7 +240,7 @@ class Parser:
                    (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and')):
             end_tokens.append(self.current_token)
             self.eat(self.current_token.type)
-        return DateSpan({'type': 'range', 'start_tokens': start_tokens, 'end_tokens': end_tokens})
+        return DateSpanNode({'type': 'range', 'start_tokens': start_tokens, 'end_tokens': end_tokens})
 
     def since_date_span(self):
         """
@@ -233,7 +253,7 @@ class Parser:
                    self.current_token.type == TokenType.SEMICOLON):
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
-        return DateSpan({'type': 'since', 'tokens': tokens})
+        return DateSpanNode({'type': 'since', 'tokens': tokens})
 
     def relative_date_span(self):
         """
@@ -243,7 +263,7 @@ class Parser:
         while self.current_token.type in [TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.ORDINAL, TokenType.TIME_UNIT, TokenType.SPECIAL]:
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
-        return DateSpan({'type': 'relative', 'tokens': tokens})
+        return DateSpanNode({'type': 'relative', 'tokens': tokens})
 
     def special_date_span(self):
         """
@@ -251,7 +271,15 @@ class Parser:
         """
         token = self.current_token
         self.eat(TokenType.SPECIAL)
-        return DateSpan({'type': 'special', 'value': token.value})
+        return DateSpanNode({'type': 'special', 'value': token.value})
+
+    def triplet_date_span(self):
+        """
+        Parses a special date span, such as 'today' or 'ytd'.
+        """
+        token = self.current_token
+        self.eat(TokenType.TRIPLET)
+        return DateSpanNode({'type': 'triplet', 'value': token.value})
 
     def month_date_span(self):
         """
@@ -271,7 +299,7 @@ class Parser:
         if self.current_token.type == TokenType.NUMBER:
             tokens.append(self.current_token)  # Append the year
             self.eat(TokenType.NUMBER)
-        return DateSpan({'type': 'months', 'tokens': tokens})
+        return DateSpanNode({'type': 'months', 'tokens': tokens})
 
     def day_date_span(self):
         """
@@ -293,4 +321,4 @@ class Parser:
         if self.current_token.type == TokenType.NUMBER:
             tokens.append(self.current_token)  # Append the year
             self.eat(TokenType.NUMBER)
-        return DateSpan({'type': 'days', 'tokens': tokens})
+        return DateSpanNode({'type': 'days', 'tokens': tokens})

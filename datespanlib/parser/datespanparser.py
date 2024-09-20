@@ -4,17 +4,6 @@ from datespanlib.parser.lexer import Lexer
 from datespanlib.parser.parser import Parser
 
 
-# Todos:
-# - use the DateSpan class for interal calculations
-#
-# - Add a parameter how to handle 'last' and 'next':
-#   To full month/quarter/year (default) or relative to today (current implementation)
-#   method to change: Evaluator.evaluate_relative() -> calculate_past()
-#
-# - ensure all methods of the evaluator resolve the correct date spans
-#
-# - harmonize error handling
-
 
 class DateSpanParser:
     """
@@ -34,16 +23,18 @@ class DateSpanParser:
         if not self.text:
             raise ParsingError('Input text cannot be empty.', line=1, column=0, token_value='')
 
-        self.lexer = Lexer(self.text)
-        self.parser = Parser(self.lexer.tokens, self.text)
         try:
+            self.lexer = Lexer(self.text)
+
+            self.parser = Parser(self.lexer.tokens, self.text)
             statements = self.parser.parse()
+
             self.evaluator = Evaluator(statements)
             self.evaluator.evaluate()
+
             return self.evaluator.evaluated_spans
 
-        except (ParsingError, EvaluationError) as e:
-            # Re-raise the exception to be caught in tests or by the caller
+        except Exception as e:
             raise e
 
     @property
