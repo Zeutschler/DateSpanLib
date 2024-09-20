@@ -3,54 +3,61 @@
 from __future__ import annotations
 from typing import Any
 import uuid
-from datetime import datetime
+from datetime import datetime, date, time
 from dateutil.parser import parserinfo
 
-from datespanlib.parser.base_parser import DateTextLanguageParser
+from datespanlib.parser.datespanparser import DateSpanParser
 from datespanlib.date_span import DateSpan
-import datespanlib.parser.loader as loader
 
 
 class DateSpanSet:
     """
     Represents a sorted set of DateSpan objects. Overlapping DateSpan objects are automatically merged together.
     Provides methods to filter, merge, subtract and compare DateSpan objects as well as to convert them into
-    SQL fragments or Python filter functions.
+    SQL fragments or filter functions for Python, Pandas or others.
     """
-    def __init__(self, definition: Any | None = None, language: str | None = "en", parser_info: parserinfo | None = None):
+    def __init__(self, definition: Any | None = None, parser_info: parserinfo | None = None):
         """
         Initializes a new DateSpanSet based on a given set of date span set definition.
         The date span set definition can be a string, a DateSpan, datetime, date or time object or a list of these.
 
         Arguments:
-            definition: (optional) a string, a DateSpan, datetime, date or time object or a list of these.
+            definition: (optional) Either a string representing a date or time span expression, a DateSpan, 
+            a datetime, date or time object or a list of such arguments.
 
-            language: (optional) An ISO 639-1 2-digit language code for the language of the text to parse.
-                Default language is 'en' for English.
-
-            parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing dates contained
-                datespan_text. If not defined, the default parser of the dateutil library will be used.
+            parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing date formats contained
+                in date span text. If not defined, the default parserinfo of the dateutil library will be used.
 
         Errors:
             ValueError: If the language is not supported or the text cannot be parsed.
         """
-        # super().__init__()
         self._spans: list[DateSpan] = []
-        self._definition: str | None = definition
+        self._definition = definition
         self._parser_info: parserinfo | None = parser_info
-
-        # set and load language
-        if not loader.language_parsers:
-            loader.load_language_parsers()
-        self._language: str | None = language.lower().strip() if isinstance(language, str) else "en"
-        if self._language not in loader.language_parsers:
-            raise ValueError(f"Date span text parsing for language '{language}' is not supported. "
-                             f"The respective parser could not be loaded or instantiated.")
-        self._parser: DateTextLanguageParser | None = loader.language_parsers[language]
-
         self._iter_index = 0
         if definition is not None:
-            self._parse(definition, parser_info)
+            expressions = []
+            if isinstance(definition, DateSpan | str | datetime | time | date):
+                expressions.append(definition)
+            elif isinstance(definition, list | tuple):
+                for item in definition:
+                    if isinstance(item, DateSpan | str | datetime | time | date):
+                        expressions.append(item)
+                    else:
+                        raise ValueError(f"Objects of type '{type(item)}' are not supported for DateSpanSet.")
+            try:
+                for exp in expressions:
+                    if isinstance(exp, DateSpan):
+                        self._spans.append(exp)
+                    elif isinstance(exp, str):
+                        self._parse(exp)
+                    elif isinstance(exp, datetime | date | time):
+                        self._spans.append(DateSpan(exp))
+                    else:
+                        raise ValueError(f"Objects of type '{type(exp)}' are not supported for DateSpanSet.")
+                self._merge_all()
+            except ValueError as e:
+                raise ValueError(f"Failed to parse '{definition}'. {e}")
 
     # Magic Methods
     def __iter__(self) -> DateSpanSet:
@@ -73,7 +80,7 @@ class DateSpanSet:
         return self.__repr__()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}[{len(self._spans)}]('{self._definition}')"
+        return f"{self.__class__.__name__}('{self._definition}') := {self._spans}"
 
     def __add__(self, other) -> DateSpanSet:
         return self.merge(other)
@@ -95,7 +102,6 @@ class DateSpanSet:
             return False
         if isinstance(other, str):
             return self == DateSpanSet(other)
-
         return False
 
     def __ne__(self, other) -> bool:
@@ -144,27 +150,16 @@ class DateSpanSet:
         return self.clone()
     # endregion
 
-    # region Public Properties and Methods
-    @property
-    def available_languages(self) -> list[str]:
-        """ Returns a list of available languages for parsing date, time or date span texts."""
-        return list(loader.language_parsers.keys())
-
-    @property
-    def language(self) -> str:
-        """ Returns the ISO 639-1 language 2-difit code of the parser, e.g. 'en' for English."""
-        return self._parser.language
-
     @property
     def start(self) -> datetime | None:
-        """Returns the start date of the first DateSpan object in the set."""
+        """Returns the start datetime of the first DateSpan object in the set."""
         if len(self._spans) > 0:
             return self._spans[0].start
         return None
 
     @property
     def end(self) -> datetime | None:
-        """ Returns the end date of the last DateSpan object in the set."""
+        """ Returns the end datetime of the last DateSpan object in the set."""
         if len(self._spans) > 0:
             return self._spans[-1].end
         return None
@@ -174,20 +169,19 @@ class DateSpanSet:
         dss = DateSpanSet()
         dss._definition = self._definition
         dss._spans = [ds.clone() for ds in self._spans]
-        dss._parser = self._parser
         dss._parser_info = self._parser_info
         return dss
 
-    def add(self, other:DateSpanSet | DateSpan | str) -> None:
+    def add(self, other:DateSpanSet | DateSpan | str):
         """ Adds a new DateSpan object to the DateSpanSet."""
-        return
+        self.merge(other)
 
-    def remove(self, other:DateSpanSet | DateSpan | str) -> None:
+    def remove(self, other:DateSpanSet | DateSpan | str):
         """ Removes a DateSpan object from the DateSpanSet."""
-        raise NotImplementedError()
+        self.intersect(other)
 
     def shift(self, years: int = 0, months: int = 0, days: int = 0, hours: int = 0, minutes: int = 0, seconds: int = 0,
-              microseconds: int = 0, weeks: int = 0) -> DateSpan:
+              microseconds: int = 0, weeks: int = 0) -> DateSpanSet:
         """
         Shifts all contained date spans by the given +/- time delta.
         """
@@ -196,13 +190,14 @@ class DateSpanSet:
             for span in self._spans:
                 new_spans.append(span.shift(years=years, months=months, days=days, hours=hours, minutes=minutes,
                            seconds=seconds, microseconds=microseconds, weeks=weeks))
-            self._spans = new_spans
+            return  DateSpanSet(new_spans)
+        raise ValueError("Failed to shift empty DateSpanSet.")
     # endregion
 
 
     # region Class Methods
     @classmethod
-    def parse(cls, datespan_text: str, language: str | None = "en", parser_info: parserinfo | None = None) -> DateSpanSet:
+    def parse(cls, datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet:
         """
             Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects.
 
@@ -216,13 +211,13 @@ class DateSpanSet:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text.
 
             Examples:
-                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
+                >>> DateSpanSet.parse('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
-        return cls(definition=datespan_text, language=language, parser_info=parser_info)
+        return cls(definition=datespan_text,parser_info=parser_info)
 
     @classmethod
-    def try_parse(cls, datespan_text: str, language: str | None = "en", parser_info: parserinfo | None = None) -> DateSpanSet | None:
+    def try_parse(cls, datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet | None:
         """
             Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects. If
             the text cannot be parsed, None is returned.
@@ -236,11 +231,11 @@ class DateSpanSet:
                 The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text or None.
 
             Examples:
-                >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
+                >>> a = DateSpanSet.try_parse('last month')  # if today would be in February 2024
                 DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
             """
         try:
-            dss = cls(definition=datespan_text, language=language, parser_info=parser_info)
+            dss = cls(definition=datespan_text, parser_info=parser_info)
             return dss
         except ValueError:
             return None
@@ -501,19 +496,36 @@ class DateSpanSet:
 
 
     # region Internal Methods
-    def _parse(self, text: str, parser_info: parserinfo | None = None) -> bool:
+    def _merge_all(self):
+        """
+        Merges all overlapping DateSpan objects in the set.
+        """
+        if len(self._spans) < 2:
+            return
+        new_spans: list[DateSpan] = []
+        for span in self._spans:
+            if not new_spans:
+                new_spans.append(span)
+            else:
+                last = new_spans[-1]
+                if last.overlaps_with(span):
+                    new_spans[-1] = last.merge(span)
+                else:
+                    new_spans.append(span)
+                    new_spans.sort()
+        self._spans = new_spans
+
+    def _parse(self, text: str | None = None):
         """
         Parses the given text into a set of DateSpan objects.
         """
         self._message = None
         self._spans.clear()
         try:
-            ds: DateSpan | list[DateSpan] = self._parser.evaluate(text, parser_info)
-            if isinstance(ds, DateSpan):
-                self._spans.append(ds)
-            else:
-                self._spans.extend(ds)
-        except ValueError as e:
-            raise e
-        return True
+            date_span_parser: DateSpanParser = DateSpanParser(text)
+            expressions = date_span_parser.parse() # todo: inject self.parser_info
+            for expr in expressions:
+                self._spans.extend([DateSpan(span[0], span[1]) for span in expr])
+        except Exception as e:
+            raise ValueError(str(e))
     # endregion

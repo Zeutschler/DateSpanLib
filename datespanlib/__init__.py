@@ -7,9 +7,10 @@ from datespanlib.date_span import DateSpan
 from datespanlib.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 __license__ = "MIT"
 VERSION = __version__
+
 
 __all__ = [
     "DateSpanSet",
@@ -26,8 +27,8 @@ def parse(datespan_text: str, language: str | None = "en", parser_info: parserin
     Arguments:
         datespan_text: The date span text to parse, e.g. 'last month', 'next 3 days', 'yesterday' or 'Jan 2024'.
         language: (optional) An ISO 639-1 2-digit compliant language code for the language of the text to parse.
-        parser_info: (optional) A dateutil.parser.parserinfo instance to use for parsing dates contained
-            datespan_text. If not defined, the default parser of the dateutil library will be used.
+        parser_info: (optional) A dateutil.parser_old.parserinfo instance to use for parsing dates contained
+            datespan_text. If not defined, the default parser_old of the dateutil library will be used.
 
     Returns:
         The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text.

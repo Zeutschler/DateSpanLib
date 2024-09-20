@@ -28,6 +28,7 @@ class TestDateSpan(TestCase):
     def test_methods(self):
         dt1 = datetime(2024, 9, 9)
         dt2 = datetime(2024, 9, 10, 11, 12)
+        dt3 = datetime(2024, 10, 10, 11, 12)
 
         undef = DateSpan.undefined()
         now = DateSpan.now()
@@ -36,8 +37,8 @@ class TestDateSpan(TestCase):
         self.assertTrue(now.consecutive_with(DateSpan.now()))
         self.assertTrue(DateSpan.now().consecutive_with(now))
 
-        self.assertTrue(DateSpan(dt1, dt2).consecutive_with(DateSpan(dt2, dt1)))
-        self.assertTrue(DateSpan(dt1, dt2).overlaps_with(DateSpan(dt2, dt1)))
+        self.assertTrue(DateSpan(dt1, dt2).consecutive_with(DateSpan(dt2, dt3)))
+        self.assertTrue(DateSpan(dt1, dt2).overlaps_with(DateSpan(dt1, dt3)))
 
         jan = DateSpan.now().replace(month=1).full_month()
         feb = DateSpan.now().replace(month=2).full_month()
@@ -51,7 +52,8 @@ class TestDateSpan(TestCase):
         self.assertTrue(jan_feb_mar == jan + feb + mar)
         self.assertTrue(jan_feb_mar == jan.merge(feb).merge(mar))
         self.assertTrue(jan_feb_mar - jan == feb + mar)
-        self.assertTrue(jan_feb_mar - (jan + feb + mar) == undef)
+        op = jan_feb_mar - (jan + feb + mar)
+        self.assertTrue(op == undef)
 
         self.assertTrue(mar > jan)
         self.assertTrue(jan < mar)
@@ -124,7 +126,7 @@ class TestDateSpan(TestCase):
 
         self.assertTrue(jan.shift_end(months=1) == jan_feb)
         self.assertTrue(jan_feb.shift_start(months=1) == feb)
-        self.assertTrue(jan.shift_start(months=1) == undef)
+        self.assertTrue(jan.shift_start(months=1) == feb.start)
 
         # other methods
         self.assertTrue(jan.to_tuple() == (jan.start, jan.end))
