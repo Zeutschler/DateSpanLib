@@ -85,69 +85,69 @@ class TestDateSpan(unittest.TestCase):
         self.assertEqual(result.end.year, 2024)
 
     def test_full_millisecond(self):
-        result = self.jan.full_millisecond()
+        result = self.jan.full_millisecond
         self.assertEqual(result.start.microsecond % 1000, 0)
         self.assertEqual(result.end.microsecond % 1000, 999)
 
     def test_full_second(self):
-        result = self.jan.full_second()
+        result = self.jan.full_second
         self.assertEqual(result.start.microsecond, 0)
         self.assertEqual(result.end.microsecond, 999999)
 
     def test_full_minute(self):
-        result = self.jan.full_minute()
+        result = self.jan.full_minute
         self.assertEqual(result.start.second, 0)
         self.assertEqual(result.end.second, 59)
 
     def test_full_hour(self):
-        result = self.jan.full_hour()
+        result = self.jan.full_hour
         self.assertEqual(result.start.minute, 0)
         self.assertEqual(result.end.minute, 59)
 
     def test_full_day(self):
-        result = self.jan.full_day()
+        result = self.jan.full_day
         self.assertEqual(result.start.hour, 0)
         self.assertEqual(result.end.hour, 23)
 
     def test_full_week(self):
-        result = self.jan.full_week()
+        result = self.jan.full_week
         self.assertEqual(result.start.weekday(), 0)
         self.assertEqual(result.end.weekday(), 6)
 
     def test_full_month(self):
-        result = self.jan.full_month()
+        result = self.jan.full_month
         self.assertEqual(result.start.day, 1)
         self.assertEqual(result.end.day, 31)
 
     def test_full_quarter(self):
-        result = self.jan.full_quarter()
+        result = self.jan.full_quarter
         self.assertEqual(result.start.month, 1)
         self.assertEqual(result.end.month, 3)
 
     def test_full_year(self):
-        result = self.jan.full_year()
+        result = self.jan.full_year
         self.assertEqual(result.start.month, 1)
         self.assertEqual(result.end.month, 12)
 
     def test_ytd(self):
-        result = self.jan.ytd()
+        result = self.jan.ytd
         self.assertEqual(result.start.month, 1)
-        self.assertEqual(result.end, self.today.end)
+        self.assertEqual(result.end, self.jan.end)
 
     def test_mtd(self):
-        result = self.jan.mtd()
+        result = self.jan.mtd
         self.assertEqual(result.start.day, 1)
-        self.assertEqual(result.end, self.today.end)
+        self.assertEqual(result.end, self.jan.end)
 
     def test_qtd(self):
-        result = self.jan.qtd()
+        result = self.jan.qtd
         self.assertEqual(result.start.day, 1)
-        self.assertEqual(result.end, self.today.end)
+        self.assertEqual(result.end, self.jan.end)
 
     def test_wtd(self):
-        result = self.jan.wtd()
+        result = self.jan.wtd
         self.assertEqual(result.start.weekday(), 0)
-        self.assertEqual(result.end, self.today.end)
+        self.assertEqual(result.end, self.jan.end)
 
     def test_shift(self):
         result = self.jan.shift(months=1)
@@ -162,17 +162,17 @@ class TestDateSpan(unittest.TestCase):
         self.assertEqual(result.end, self.feb.end)
 
     def test_set_start(self):
-        new_start = DateSpan(datetime(2023, 1, 15)).full_day()
+        new_start = DateSpan(datetime(2023, 1, 15)).full_day
         result = self.jan.set_start(day=15)
         self.assertEqual(result.start, new_start.start)
 
     def test_set_end(self):
-        new_end = DateSpan(datetime(2023, 1, 15)).full_day()
+        new_end = DateSpan(datetime(2023, 1, 15)).full_day
         result = self.jan.set_end(day=15)
         self.assertEqual(result.end, new_end.end)
 
     def test_set(self):
-        new_date = DateSpan(datetime(2023, 1, 15)).full_day()
+        new_date = DateSpan(datetime(2023, 1, 15)).full_day
         result = self.jan.set(day=15)
         self.assertEqual(result.start, new_date.start)
         self.assertEqual(result.end, new_date.end)

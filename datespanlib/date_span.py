@@ -13,7 +13,7 @@ class DateSpan:
 
     The DateSpan is immutable, all methods that change the DateSpan will return a new DateSpan.
     """
-    TIME_EPSILON_MICROSECONDS = 1000  # 1 millisecond
+    TIME_EPSILON_MICROSECONDS = 100_000  # 0.1 seconds
     """The time epsilon in microseconds used for comparison of time deltas."""
     MIN_YEAR = 1700
     """The minimum year that can be represented by the DateSpan."""
@@ -192,11 +192,11 @@ class DateSpan:
                 if "." in parts[2]:
                     return ds
                 else:
-                    return ds.full_second()
+                    return ds.full_second
             elif len(parts) == 2:
-                return ds.full_minute()
+                return ds.full_minute
             elif len(parts) == 1:
-                return ds.full_hour()
+                return ds.full_hour
         return ds
 
     def with_start(self, dt: datetime) -> DateSpan:
@@ -227,6 +227,7 @@ class DateSpan:
         year_diff = self._end.year - self._start.year
         return DateSpan(self._start.replace(year=year), self._end.replace(year=year + year_diff))
 
+    @property
     def full_millisecond(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective millisecond(s).
@@ -235,6 +236,7 @@ class DateSpan:
         return DateSpan(self._start.replace(microsecond=musec),
                         self._end.replace(microsecond=musec + 999))
 
+    @property
     def full_second(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective second(s).
@@ -242,6 +244,7 @@ class DateSpan:
         return DateSpan(self._start.replace(microsecond=0),
                         self._end.replace(microsecond=999999))
 
+    @property
     def full_minute(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective minute(s).
@@ -249,6 +252,7 @@ class DateSpan:
         return DateSpan(self._start.replace(second=0, microsecond=0),
                         self._end.replace(second=59, microsecond=999999))
 
+    @property
     def full_hour(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective hour(s).
@@ -256,13 +260,19 @@ class DateSpan:
         return DateSpan(self._start.replace(minute=0, second=0, microsecond=0),
                         self._end.replace(minute=59, second=59, microsecond=999999))
 
+    @property
     def full_day(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective day(s).
         """
+        if self.is_undefined:
+            return DateSpan(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
+                        datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999))
+
         return DateSpan(self._start.replace(hour=0, minute=0, second=0, microsecond=0),
                         self._end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
+    @property
     def full_week(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective week(s).
@@ -272,6 +282,7 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
+    @property
     def full_month(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective month(s).
@@ -281,6 +292,7 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
+    @property
     def full_quarter(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective quarter(s).
@@ -294,6 +306,7 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
+    @property
     def full_year(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the respective year(s).
@@ -303,45 +316,61 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-    @staticmethod
-    def ltm() -> DateSpan:
+
+    @property
+    def ltm(self) -> DateSpan:
         """
-        Returns a new DateSpan representing the last 12 months. The start date will be set to the first day of the
+        Returns a new DateSpan representing the last 12 months relative to the end date of the DateSpan.
+        If the DateSpan is undefined, the last 12 months relative to today will be returned.
         """
-        ds = DateSpan.today().shift_start(years=-1, days=1)
+        if self.is_undefined:
+            return DateSpan.today().shift_start(years=-1, days=1)
+        ds = DateSpan(self._end, self._end).shift_start(years=-1, days=1)
         return ds
 
-    @staticmethod
-    def ytd() -> DateSpan:
+    @property
+    def ytd(self) -> DateSpan:
         """
-        Returns a new DateSpan with the start and end date set to the beginning and end of the year-to-date.
+        Returns a new DateSpan with the start set to the beginning of the current DateSpan's start year and the end
+        set to the end of the current end date of the DateSpan.
+        If the DateSpan is undefined, the beginning of the current year up to today (full day) will be returned.
         """
-        ds = DateSpan.today()
-        return ds.with_start(ds.full_year().start)
+        if self.is_undefined:
+            return DateSpan.today().with_start(DateSpan.today().full_year.start)
+        return DateSpan(start = self.with_start(self.full_year.start).start,
+                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-    @staticmethod
-    def mtd() -> DateSpan:
+    @property
+    def mtd(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the month-to-date.
         """
-        ds = DateSpan.today()
-        return ds.with_start(ds.full_month().start)
+        if self.is_undefined:
+            return DateSpan.today().with_start(DateSpan.today().full_month.start)
+        return DateSpan(start = self.with_start(self.full_month.start).start,
+                          end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-    @staticmethod
-    def qtd() -> DateSpan:
+
+    @property
+    def qtd(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the quarter-to-date.
         """
-        ds = DateSpan.today()
-        return ds.with_start(ds.full_quarter().start)
+        if self.is_undefined:
+            return DateSpan.today().with_start(DateSpan.today().full_quarter.start)
+        return DateSpan(start = self.with_start(self.full_quarter.start).start,
+                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-    @staticmethod
-    def wtd() -> DateSpan:
+
+    @property
+    def wtd(self) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the beginning and end of the week-to-date.
         """
-        ds = DateSpan.today()
-        return ds.with_start(ds.full_week()._start)
+        if self.is_undefined:
+            return DateSpan.today().with_start(DateSpan.today().full_week.start)
+        return DateSpan(start = self.with_start(self.full_week.start).start,
+                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
     def _begin_of_day(self, dt: datetime) -> datetime:
         """Returns the beginning of the day for the given datetime."""
@@ -383,10 +412,43 @@ class DateSpan:
     @property
     def is_full_month(self) -> bool:
         """
-        Returns True if the DateSpan is a full month.
+        Returns True if the DateSpan represents one or more full months.
         """
         return (self._start == self._begin_of_month(self._start) and
                 self._end == self._end_of_month(self._end))
+
+    @property
+    def is_full_quarter(self) -> bool:
+        """
+        Returns True if the DateSpan represents one or more full quarters.
+        """
+        return (self._start == self._begin_of_month(self._start) and self._start.month % 3 == 1 and
+                self._end == self._end_of_month(self._end) and self._end.month % 3 == 0)
+
+    @property
+    def is_full_year(self) -> bool:
+        """
+        Returns True if the DateSpan represents one or more full year.
+        """
+        return (self._start == self._start.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0) and
+                self._end == self._end.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999))
+
+    @property
+    def is_full_week(self) -> bool:
+        """
+        Returns True if the DateSpan represents one or more full weeks.
+        """
+        return (self._start == self._begin_of_day(self._start - timedelta(days=self._start.weekday())) and
+                self._end == self._end_of_day(self._end + timedelta(days=6 - self._end.weekday())))
+
+    @property
+    def is_full_day(self) -> bool:
+        """
+        Returns True if the DateSpan represents one or more full days.
+        """
+        return (self._start == self._begin_of_day(self._start) and
+                self._end == self._end_of_day(self._end))
+
 
     def _swap(self) -> DateSpan:
         """Swap start and end date if start is greater than end."""
@@ -565,7 +627,7 @@ class DateSpan:
         if day is not None:
             if not 0 < day < 32:
                 raise ValueError(f"Invalid day value '{day}'.")
-            last_day = DateSpan(self._start).full_month()._end.day
+            last_day = DateSpan(self._start).full_month._end.day
             if day > last_day:
                 day = last_day
             dt = dt.replace(day=day)
@@ -616,6 +678,13 @@ class DateSpan:
 
     # region Static Days, Month and other calculations
     @classmethod
+    def max(cls) -> DateSpan:
+        """
+        Returns the maximum possible DateSpan ranging from datetime.min to datetime.max.
+        """
+        return DateSpan(datetime.min, datetime.max)
+
+    @classmethod
     def now(cls) -> DateSpan:
         """Returns a new DateSpan with the start and end date set to the current date and time."""
         now = datetime.now()
@@ -624,125 +693,208 @@ class DateSpan:
     @classmethod
     def today(cls) -> DateSpan:
         """Returns a new DateSpan with the start and end date set to the current date."""
-        return DateSpan.now().full_day()
+        return DateSpan.now().full_day
 
     @classmethod
     def yesterday(cls) -> DateSpan:
         """Returns a new DateSpan with the start and end date set to yesterday."""
-        return DateSpan.now().shift(days=-1).full_day()
+        return DateSpan.now().shift(days=-1).full_day
 
     @classmethod
     def tomorrow(cls) -> DateSpan:
         """Returns a new DateSpan with the start and end date set to tomorrow."""
-        return DateSpan.now().shift(days=1).full_day()
+        return DateSpan.now().shift(days=1).full_day
 
     @classmethod
     def undefined(cls) -> DateSpan:
-        """Returns an empty / undefined DateSpan."""
+        """Returns an undefined DateSpan. Same as `span = DateSpan()`."""
         return DateSpan(None, None)
 
     @classmethod
-    def _monday(cls, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0, offset_days: int = 0) -> DateSpan:
+    def _monday(cls, base: datetime | None = None, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0, offset_days: int = 0) -> DateSpan:
         # Monday is 0 and Sunday is 6
-        dtv = datetime.now() + relativedelta(weekday=MO(-1), years=offset_years,
+        if  base is None:
+            base = datetime.now()
+        dtv = base + relativedelta(weekday=MO(-1), years=offset_years,
                                              months=offset_months, days=offset_days, weeks=offset_weeks)
-        return DateSpan(dtv).full_day()
+        return DateSpan(dtv).full_day
 
-    @classmethod
-    def monday(cls):
-        """Returns a full day DateSpan for the current weeks Monday."""
-        return cls._monday()
+    @property
+    def monday(self):
+        """
+        Returns the Monday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Monday will be returned.
+        """
+        return self._monday(base = self._start)
 
-    @classmethod
-    def tuesday(cls):
-        """Returns a full day DateSpan for the current weeks Tuesday."""
-        return cls._monday().shift(days=1)
+    @property
+    def tuesday(self):
+        """
+        Returns the Tuesday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Tuesday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=1)
 
-    @classmethod
-    def wednesday(cls):
-        """Returns a full day DateSpan for the current weeks Wednesday."""
-        return cls._monday().shift(days=2)
+    @property
+    def wednesday(self):
+        """
+        Returns the Wednesday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Wednesday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=2)
 
-    @classmethod
-    def thursday(cls):
-        """Returns a full day DateSpan for the current weeks Thursday."""
-        return cls._monday().shift(days=3)
+    @property
+    def thursday(self):
+        """
+        Returns the Thursday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Thursday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=3)
 
-    @classmethod
-    def friday(cls):
-        """Returns a full day DateSpan for the current weeks Friday."""
-        return cls._monday().shift(days=4)
+    @property
+    def friday(self):
+        """
+        Returns the Friday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Friday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=4)
 
-    @classmethod
-    def saturday(cls):
-        """Returns a full day DateSpan for the current weeks Saturday."""
-        return cls._monday().shift(days=5)
+    @property
+    def saturday(self):
+        """
+        Returns the Saturday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Saturday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=5)
 
-    @classmethod
-    def sunday(cls):
-        """Returns a full day DateSpan for the current weeks Sunday."""
-        return cls._monday().shift(days=6)
+    @property
+    def sunday(self):
+        """
+        Returns the Sunday relative to the week of the start date time of the DateSpan.
+        If the DateSpan is undefined, the current week's Sunday will be returned.
+        """
+        return self._monday(base = self._start).shift(days=6)
 
-    @classmethod
-    def january(cls):
-        """Returns a full month DateSpan for January of the current year."""
-        return DateSpan.now().replace(month=2).full_month()
 
-    @classmethod
-    def february(cls):
-        """Returns a full month DateSpan for February of the current year."""
-        return DateSpan.now().replace(month=2).full_month()
+    @property
+    def january(self):
+        """
+        Returns a full month DateSpan for January relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's January will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=1).full_month
+        return self._start.replace(month=1).full_month
 
-    @classmethod
-    def march(cls):
-        """Returns a full month DateSpan for March of the current year."""
-        return DateSpan.now().replace(month=3).full_month()
+    @property
+    def february(self):
+        """
+        Returns a full month DateSpan for February relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's February will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=2).full_month
+        return self._start.replace(month=2).full_month
 
-    @classmethod
-    def april(cls):
-        """Returns a full month DateSpan for April of the current year."""
-        return DateSpan.now().replace(month=4).full_month()
+    @property
+    def march(self):
+        """
+        Returns a full month DateSpan for March relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's March will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=3).full_month
+        return self._start.replace(month=3).full_month
 
-    @classmethod
-    def may(cls):
-        """Returns a full month DateSpan for May of the current year."""
-        return DateSpan.now().replace(month=5).full_month()
+    @property
+    def april(self):
+        """
+        Returns a full month DateSpan for April relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's April will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=4).full_month
+        return self._start.replace(month=4).full_month
 
-    @classmethod
-    def june(cls):
-        """Returns a full month DateSpan for June of the current year."""
-        return DateSpan.now().replace(month=6).full_month()
+    @property
+    def may(self):
+        """
+        Returns a full month DateSpan for May relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's May will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=5).full_month
+        return self._start.replace(month=5).full_month
 
-    @classmethod
-    def july(cls):
-        """Returns a full month DateSpan for July of the current year."""
-        return DateSpan.now().replace(month=7).full_month()
+    @property
+    def june(self):
+        """
+        Returns a full month DateSpan for June relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's June will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=6).full_month
+        return self._start.replace(month=6).full_month
 
-    @classmethod
-    def august(cls):
-        """Returns a full month DateSpan for August of the current year."""
-        return DateSpan.now().replace(month=8).full_month()
+    @property
+    def july(self):
+        """
+        Returns a full month DateSpan for July relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's July will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=7).full_month
+        return self._start.replace(month=7).full_month
 
-    @classmethod
-    def september(cls):
-        """Returns a full month DateSpan for September of the current year."""
-        return DateSpan.now().replace(month=9).full_month()
+    @property
+    def august(self):
+        """
+        Returns a full month DateSpan for August relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's August will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=8).full_month
+        return self._start.replace(month=8).full_month
 
-    @classmethod
-    def october(cls):
-        """Returns a full month DateSpan for October of the current year."""
-        return DateSpan.now().replace(month=10).full_month()
+    @property
+    def september(self):
+        """
+        Returns a full month DateSpan for September relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's September will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=9).full_month
+        return self._start.replace(month=9).full_month
 
-    @classmethod
-    def november(cls):
-        """Returns a full month DateSpan for November of the current year."""
-        return DateSpan.now().replace(month=11).full_month()
+    @property
+    def october(self):
+        """
+        Returns a full month DateSpan for October relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's October will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=10).full_month
+        return self._start.replace(month=10).full_month
 
-    @classmethod
-    def december(cls):
-        """Returns a full month DateSpan for December of the current year."""
-        return DateSpan.now().replace(month=12).full_month()
+    @property
+    def november(self):
+        """
+        Returns a full month DateSpan for November relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's November will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=11).full_month
+        return self._start.replace(month=11).full_month
 
+    @property
+    def december(self):
+        """
+        Returns a full month DateSpan for December relative to the start date time of the DateSpan.
+        If the DateSpan is undefined, the current year's December will be returned.
+        """
+        if self.is_undefined:
+            return DateSpan.now().replace(month=12).full_month
+        return self._start.replace(month=12).full_month
     # endregion
 
     # region magic methods

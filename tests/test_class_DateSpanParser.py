@@ -77,13 +77,13 @@ class TestDateSpanParser(unittest.TestCase):
                 # Calculate expected start date
                 # todo: following test values are wrong -> use DateSpan
                 if unit == 'day':
-                    expected = DateSpan.today().full_day().shift_end(days=number) # today - timedelta(days=number)
+                    expected = DateSpan.today().full_day.shift_end(days=number) # today - timedelta(days=number)
                 elif unit == 'week':
-                    expected = DateSpan.today().full_week().shift_end(weeks=number) # today - timedelta(weeks=number)
+                    expected = DateSpan.today().full_week.shift_end(weeks=number) # today - timedelta(weeks=number)
                 elif unit == 'month':
-                    expected = DateSpan.today().full_month().shift_end(months=number) # today - relativedelta(months=number)
+                    expected = DateSpan.today().full_month.shift_end(months=number) # today - relativedelta(months=number)
                 elif unit == 'year':
-                    expected = DateSpan.today().full_year().shift_end(years=number) # today - relativedelta(years=number)
+                    expected = DateSpan.today().full_year.shift_end(years=number) # today - relativedelta(years=number)
                 else:
                     continue
                 self.assertEqual(start.date(), expected.start.date(), f"Input: '{input_text}' -> start = ")
@@ -104,17 +104,24 @@ class TestDateSpanParser(unittest.TestCase):
             self.assertEqual(start.month, datetime.today().month)
             self.assertEqual(end.date(), start.date())
 
-    def test_since_keyword(self):
+    def test_half_bounded_keywords(self):
         """Test parsing of 'since' keyword."""
-        input_text = "since August 2024"
-        parser = DateSpanParser(input_text)
-        parser.parse()
-        date_spans = parser.date_spans
-        self.assertEqual(len(date_spans), 1)
-        start, end = date_spans[0][0]
-        self.assertEqual(start, datetime(2024, 8, 1))
-        # End should be today
-        self.assertEqual(end.date(), datetime.today().date())
+        aug24 = DateSpan(datetime(2024, 8, 1)).full_month
+        texts = [("since August 2024", aug24.start, DateSpan().now().end),
+                 ("after August 2024", aug24.end + timedelta(microseconds=1), DateSpan.max().end),
+                 ("until August 2024", DateSpan().max().start, aug24.start - timedelta(microseconds=1)),
+                 ("from August 2024", aug24.start, DateSpan().max().end),
+                 ("before August 2024", DateSpan().max().start, aug24.start - timedelta(microseconds=1)),
+                 ("till August 2024", DateSpan().max().start, aug24.start - timedelta(microseconds=1)),
+                 # ("upto August 2024", DateSpan().today().start, datetime(2024, 8, 1)),
+                 ]
+        for input_text, tobe_start, tobe_end in texts:
+            parser = DateSpanParser(input_text)
+            parser.parse()
+            date_span = parser.date_spans[0][0]
+            as_is: DateSpan = DateSpan(date_span[0], date_span[1])
+            to_be: DateSpan = DateSpan(tobe_start, tobe_end)
+            self.assertTrue(as_is.almost_equals(to_be), f"Input: '{input_text}' -> {as_is} != {to_be}")
 
     def test_now_keyword(self):
         """Test parsing of 'now' keyword."""
@@ -249,7 +256,7 @@ class TestDateSpanParser(unittest.TestCase):
         self.assertEqual(start.date(), yesterday.date())
         # Third statement: last week
         start, end = date_spans[2][0]
-        expected_start = DateSpan.today().shift(days=-7).full_week().start # today - timedelta(weeks=1)
+        expected_start = DateSpan.today().shift(days=-7).full_week.start # today - timedelta(weeks=1)
         self.assertEqual(start.date(), expected_start.date())
 
     def test_month_names(self):
