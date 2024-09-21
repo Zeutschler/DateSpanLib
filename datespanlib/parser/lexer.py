@@ -172,10 +172,24 @@ class Lexer:
 
         'next': 'next',
 
-        'since': 'since',
         'and': 'and',
         'of': 'of',
-        'in': 'in',  # Added 'in' to IDENTIFIER_ALIASES
+        'in': 'in',
+
+        'since': 'since',
+        'until': 'until',
+        'till': 'until',
+        'up to': 'upto', # not yet implemented
+
+        'before': 'before',
+        'bef': 'before',
+        'bfr': 'before',
+        'ante': 'before',
+
+        'after': 'after',
+        'aft': 'after',
+        'aftr': 'after',
+        'post': 'after',
 
         'from': 'from',
         'frm': 'from',

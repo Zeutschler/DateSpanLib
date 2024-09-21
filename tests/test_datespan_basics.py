@@ -40,9 +40,9 @@ class TestDateSpan(TestCase):
         self.assertTrue(DateSpan(dt1, dt2).consecutive_with(DateSpan(dt2, dt3)))
         self.assertTrue(DateSpan(dt1, dt2).overlaps_with(DateSpan(dt1, dt3)))
 
-        jan = DateSpan.now().replace(month=1).full_month()
-        feb = DateSpan.now().replace(month=2).full_month()
-        mar = DateSpan.now().replace(month=3).full_month()
+        jan = DateSpan.now().replace(month=1).full_month
+        feb = DateSpan.now().replace(month=2).full_month
+        mar = DateSpan.now().replace(month=3).full_month
 
         # DateSpan arithmetic
         jan_feb = jan + feb
@@ -101,18 +101,18 @@ class TestDateSpan(TestCase):
                          jan.end.replace(hour=12, minute=34, second=56, microsecond=0))
         self.assertTrue(result == to_be)
 
-        self.assertEqual(now.full_second(),
+        self.assertEqual(now.full_second,
                          DateSpan(now.start.replace(microsecond=0), now.end.replace(microsecond=999999)))
-        self.assertEqual(now.full_minute(), DateSpan(now.start.replace(second=0, microsecond=0),
+        self.assertEqual(now.full_minute, DateSpan(now.start.replace(second=0, microsecond=0),
                                                      now.end.replace(second=59, microsecond=999999)))
-        self.assertEqual(now.full_hour(), DateSpan(now.start.replace(minute=0, second=0, microsecond=0),
+        self.assertEqual(now.full_hour, DateSpan(now.start.replace(minute=0, second=0, microsecond=0),
                                                    now.end.replace(minute=59, second=59, microsecond=999999)))
-        self.assertEqual(now.full_day(), DateSpan(now.start.replace(hour=0, minute=0, second=0, microsecond=0),
+        self.assertEqual(now.full_day, DateSpan(now.start.replace(hour=0, minute=0, second=0, microsecond=0),
                                                   now.end.replace(hour=23, minute=59, second=59, microsecond=999999)))
-        result = now.full_week()  # to lazy to write a test, copilot to stupid
-        result = now.full_month()  # to lazy to write a test, copilot to stupid
-        result = now.full_quarter()  # to lazy to write a test, copilot to stupid
-        self.assertEqual(now.full_year(),
+        result = now.full_week  # to lazy to write a test, copilot to stupid
+        result = now.full_month  # to lazy to write a test, copilot to stupid
+        result = now.full_quarter  # to lazy to write a test, copilot to stupid
+        self.assertEqual(now.full_year,
                          DateSpan(now.start.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0),
                                   now.end.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)))
 

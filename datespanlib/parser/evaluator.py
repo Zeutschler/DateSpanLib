@@ -59,8 +59,11 @@ class Evaluator:
 
         elif node_type == 'range':
             return self.evaluate_range(node.value['start_tokens'], node.value['end_tokens'])
-        elif node_type == 'since':
-            return self.evaluate_since(node.value['tokens'])
+        # elif node_type == 'since':
+        #     return self.evaluate_since(node.value['tokens'])
+        elif node_type == 'half_bound':
+            return self.evaluate_half_bound(node.value['tokens'], node.value['value'])
+
         elif node_type == 'iterative':
             return self.evaluate_iterative(node.value['tokens'], node.value['period_tokens'])
         else:
@@ -170,6 +173,57 @@ class Evaluator:
         start_date = spans[0][0]
         end_date = self.today
         return [(start_date, end_date)]
+
+    def evaluate_half_bound(self, tokens, keyword):
+        """
+        Evaluates a half bounded expression, calculating the date range from or to a specified date/time.
+        since - from date to now
+        after - from date to date max
+        before - from date min to date
+        until - from date min to date
+        """
+        # Parse the date/time expression following 'since', 'after', 'before', or 'until'
+        if len(tokens) == 0:
+            raise EvaluationError(f"Date of date span missing after "
+                                  f"'since', 'after', 'before', or 'until'.")
+
+        parser = Parser(tokens + [Token(TokenType.EOF)])
+        try:
+            ast_nodes = parser.parse_statement()
+        except ParsingError as e:
+            raise EvaluationError(f"Failed to parse date of date span after 'since', 'after', 'before', or 'until': {e}")
+        if not ast_nodes:
+            raise EvaluationError(f"Date of date span missing after "
+                                  f"'since', 'after', 'before', or 'until'.")
+
+        try:
+            spans = self.evaluate_node(ast_nodes[0])
+        except EvaluationError as e:
+            raise EvaluationError(f"Failed to evaluate date of date span after "
+                                  f"'since', 'after', 'before', or 'until': {e}")
+        if not spans:
+            raise EvaluationError(f"Failed to evaluate date of date span after "
+                                  f"'since', 'after', 'before', or 'until'.")
+
+        if keyword  == 'since':
+            start_date = spans[0][0]
+            end_date = self.today
+        elif keyword == 'from':
+            start_date = spans[0][0]
+            end_date = datetime.max
+        elif keyword == 'after':
+            start_date = spans[0][1] + timedelta(microseconds=1)
+            end_date = datetime.max
+        elif keyword in ['before', 'until']:
+            start_date = datetime.min
+            end_date = spans[0][0] - timedelta(microseconds=1)
+        else:
+            raise EvaluationError(
+                f"Failed to evaluate date or datespan. Expected 'since', "
+                f"'after', 'before', or 'until' but got '{keyword}'.")
+        return [(start_date, end_date)]
+
+
 
     def evaluate_iterative(self, tokens, period_tokens):
         """
@@ -335,33 +389,33 @@ class Evaluator:
         elif value == 'now':
             return DateSpan.now().to_tuple_list()
         elif value == 'ltm':
-            return DateSpan.ltm().to_tuple_list()
+            return DateSpan().ltm.to_tuple_list()
         elif value == 'ytd':
-            return DateSpan.ytd().to_tuple_list()
+            return DateSpan().ytd.to_tuple_list()
         elif value == 'qtd':
-            return DateSpan.qtd().to_tuple_list()
+            return DateSpan().qtd.to_tuple_list()
         elif value == 'mtd':
-            return DateSpan.mtd().to_tuple_list()
+            return DateSpan().mtd.to_tuple_list()
         elif value == 'wtd':
-            return DateSpan.wtd().to_tuple_list()
+            return DateSpan().wtd.to_tuple_list()
 
         # catch the following single words as specials
         elif value == 'week':
-            return DateSpan.now().full_week().to_tuple_list()
+            return DateSpan.now().full_week.to_tuple_list()
         elif value == 'month':
-            return DateSpan.now().full_month().to_tuple_list()
+            return DateSpan.now().full_month.to_tuple_list()
         elif value == 'year':
-            return DateSpan.now().full_year().to_tuple_list()
+            return DateSpan.now().full_year.to_tuple_list()
         elif value == 'quarter':
-            return DateSpan.now().full_quarter().to_tuple_list()
+            return DateSpan.now().full_quarter.to_tuple_list()
         elif value == 'hour':
-            return DateSpan.now().full_hour().to_tuple_list()
+            return DateSpan.now().full_hour.to_tuple_list()
         elif value == 'minute':
-            return DateSpan.now().full_minute().to_tuple_list()
+            return DateSpan.now().full_minute.to_tuple_list()
         elif value == 'second':
-            return DateSpan.now().full_second().to_tuple_list()
+            return DateSpan.now().full_second.to_tuple_list()
         elif value == 'millisecond':
-            return DateSpan.now().full_millisecond().to_tuple_list()
+            return DateSpan.now().full_millisecond.to_tuple_list()
 
 
         elif value in ['q1', 'q2', 'q3', 'q4']:
@@ -369,15 +423,15 @@ class Evaluator:
             year = DateSpan.now().start.year
             quarter = int(value[1])
             month = 3 * (quarter - 1) + 1
-            return DateSpan(datetime(year= year, month=month, day=1)).full_quarter().to_tuple_list()
+            return DateSpan(datetime(year= year, month=month, day=1)).full_quarter.to_tuple_list()
         elif value == 'py':
-            return DateSpan.now().shift(years=-1).full_year().to_tuple_list()
+            return DateSpan.now().shift(years=-1).full_year.to_tuple_list()
         elif value == 'cy':
-            return DateSpan.now().full_year().to_tuple_list()
+            return DateSpan.now().full_year.to_tuple_list()
         elif value == 'ny':
-            return DateSpan.now().shift(years=1).full_year().to_tuple_list()
+            return DateSpan.now().shift(years=1).full_year.to_tuple_list()
         elif value == 'ly':
-            return DateSpan.now().shift(years=-1).full_year().to_tuple_list()
+            return DateSpan.now().shift(years=-1).full_year.to_tuple_list()
         else:
             return []
 
@@ -448,11 +502,22 @@ class Evaluator:
                 days.append(day_full_name)
             idx += 1
         date_spans = []
-        lookups = {"monday": DateSpan.monday, "tuesday": DateSpan.tuesday, "wednesday": DateSpan.wednesday,
-                   "thursday": DateSpan.thursday, "friday": DateSpan.friday, "saturday": DateSpan.saturday,
-                   "sunday": DateSpan.sunday}
+
         for day_name in days:
-            span = lookups[day_name]()
+            if day_name == 'monday':
+                span = DateSpan().monday
+            elif day_name == 'tuesday':
+                span = DateSpan().tuesday
+            elif day_name == 'wednesday':
+                span = DateSpan().wednesday
+            elif day_name == 'thursday':
+                span = DateSpan().thursday
+            elif day_name == 'friday':
+                span = DateSpan().friday
+            elif day_name == 'saturday':
+                span = DateSpan().saturday
+            elif day_name == 'sunday':
+                span = DateSpan().sunday
             date_spans.append((span.start, span.end))
         return date_spans
 
@@ -469,7 +534,7 @@ class Evaluator:
         elif unit == 'quarter':
             return DateSpan.now().shift_start(months=-number * 3).to_tuple_list()
         elif unit == 'week':
-            return DateSpan.now().shift(weeks=-1).full_week().shift_start(weeks=number - 1).to_tuple_list()
+            return DateSpan.now().shift(weeks=-1).full_week.shift_start(weeks=number - 1).to_tuple_list()
         elif unit == 'day':
             return DateSpan.now().shift_start(days=-number).to_tuple_list()
         elif unit == 'hour':
@@ -490,23 +555,23 @@ class Evaluator:
         Note: Previous and last are synonyms.
         """
         if unit == 'month': # most used units first
-            return DateSpan.today().shift(months=-1).full_month().shift_start(months=-(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(months=-1).full_month.shift_start(months=-(number - 1)).to_tuple_list()
         elif unit == 'year':
-            return DateSpan.today().shift(years=-1).full_year().shift_start(years=-(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(years=-1).full_year.shift_start(years=-(number - 1)).to_tuple_list()
         elif unit == 'quarter':
-            return DateSpan.today().shift(months=-3).full_quarter().shift_start(months=-(number - 1) * 3).to_tuple_list()
+            return DateSpan.today().shift(months=-3).full_quarter.shift_start(months=-(number - 1) * 3).to_tuple_list()
         elif unit == 'week':
-            return DateSpan.today().shift(weeks=-1).full_week().shift_start(weeks=-(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(weeks=-1).full_week.shift_start(weeks=-(number - 1)).to_tuple_list()
         elif unit == 'day':
             return DateSpan.yesterday().shift_start(days=-(number - 1)).to_tuple_list()
         elif unit == 'hour':
-            return DateSpan.now().shift(hours=-1).full_hour().shift_start(hours=-(number - 1)).to_tuple_list()
+            return DateSpan.now().shift(hours=-1).full_hour.shift_start(hours=-(number - 1)).to_tuple_list()
         elif unit == 'minute':
-            return DateSpan.now().shift(minutes=-1).full_minute().shift_start(minutes=-(number - 1)).to_tuple_list()
+            return DateSpan.now().shift(minutes=-1).full_minute.shift_start(minutes=-(number - 1)).to_tuple_list()
         elif unit == 'second':
-            return DateSpan.now().shift(seconds=-1).full_second().shift_start(seconds=-(number - 1)).to_tuple_list()
+            return DateSpan.now().shift(seconds=-1).full_second.shift_start(seconds=-(number - 1)).to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().shift(microseconds=-1000).full_millisecond().shift_start(microseconds=-(number - 1) * 1000).to_tuple_list()
+            return DateSpan.now().shift(microseconds=-1000).full_millisecond.shift_start(microseconds=-(number - 1) * 1000).to_tuple_list()
         else:
             return []
 
@@ -518,21 +583,21 @@ class Evaluator:
         if unit == 'day':
             return DateSpan.today().shift(days=1).shift_end(days=(number - 1)).to_tuple_list()
         elif unit == 'week':
-            return DateSpan.today().shift(weeks=1).full_week().shift_end(weeks=(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(weeks=1).full_week.shift_end(weeks=(number - 1)).to_tuple_list()
         elif unit == 'month':
-            return DateSpan.today().shift(months=1).full_month().shift_end(months=(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(months=1).full_month.shift_end(months=(number - 1)).to_tuple_list()
         elif unit == 'year':
-            return DateSpan.today().shift(years=1).full_year().shift_end(years=(number - 1)).to_tuple_list()
+            return DateSpan.today().shift(years=1).full_year.shift_end(years=(number - 1)).to_tuple_list()
         elif unit == 'quarter':
-            return DateSpan.today().shift(months=3).full_quarter().shift_end(months=(number - 1)*3).to_tuple_list()
+            return DateSpan.today().shift(months=3).full_quarter.shift_end(months=(number - 1)*3).to_tuple_list()
         elif unit == 'hour':
-            return DateSpan.now().shift(hours=1).full_hour().shift_end(hours=number - 1).to_tuple_list()
+            return DateSpan.now().shift(hours=1).full_hour.shift_end(hours=number - 1).to_tuple_list()
         elif unit == 'minute':
-            return DateSpan.now().shift(minutes=1).full_minute().shift_end(minutes=number - 1).to_tuple_list()
+            return DateSpan.now().shift(minutes=1).full_minute.shift_end(minutes=number - 1).to_tuple_list()
         elif unit == 'second':
-            return DateSpan.now().shift(seconds=1).full_second().shift_end(seconds=number - 1).to_tuple_list()
+            return DateSpan.now().shift(seconds=1).full_second.shift_end(seconds=number - 1).to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().shift(microseconds=1000).full_millisecond().shift_end(microseconds=(number - 1) * 1000).to_tuple_list()
+            return DateSpan.now().shift(microseconds=1000).full_millisecond.shift_end(microseconds=(number - 1) * 1000).to_tuple_list()
         else:
             return []
 
@@ -542,23 +607,23 @@ class Evaluator:
         Calculates the date range for the current period specified by the unit (day, week, month, year, quarter).
         """
         if unit == 'day':
-            return DateSpan.now().full_day().to_tuple_list()
+            return DateSpan.now().full_day.to_tuple_list()
         elif unit == 'week':
-            return DateSpan.now().full_week().to_tuple_list()
+            return DateSpan.now().full_week.to_tuple_list()
         elif unit == 'month':
-            return DateSpan.now().full_month().to_tuple_list()
+            return DateSpan.now().full_month.to_tuple_list()
         elif unit == 'year':
-            return DateSpan.now().full_year().to_tuple_list()
+            return DateSpan.now().full_year.to_tuple_list()
         elif unit == 'quarter':
-            return DateSpan.now().full_quarter().to_tuple_list()
+            return DateSpan.now().full_quarter.to_tuple_list()
         elif unit == 'hour':
-            return DateSpan.now().full_hour().to_tuple_list()
+            return DateSpan.now().full_hour.to_tuple_list()
         elif unit == 'minute':
-            return DateSpan.now().full_minute().to_tuple_list()
+            return DateSpan.now().full_minute.to_tuple_list()
         elif unit == 'second':
-            return DateSpan.now().full_second().to_tuple_list()
+            return DateSpan.now().full_second.to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().full_millisecond().to_tuple_list()
+            return DateSpan.now().full_millisecond.to_tuple_list()
         else:
             return []
 

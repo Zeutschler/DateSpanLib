@@ -1,3 +1,5 @@
+from anyio.lowlevel import current_token
+
 from datespanlib.parser.errors import ParsingError
 from datespanlib.parser.lexer import Token, TokenType, Lexer
 
@@ -100,10 +102,12 @@ class Parser:
         if self.current_token.type == TokenType.IDENTIFIER:
             if self.current_token.value == 'every':
                 return self.iterative_date_span()
-            elif self.current_token.value in ['last', 'next', 'past', 'this', 'previous', 'rolling']:
+            elif self.current_token.value in ['last', 'next', 'past', 'previous', 'rolling', 'this']:
                 return self.relative_date_span()
-            elif self.current_token.value == 'since':
-                return self.since_date_span()
+            # elif self.current_token.value == 'since':
+            #     return self.since_date_span()
+            elif self.current_token.value in ['after', 'before', 'since', 'until']:
+                return self.half_bound_date_span()
             elif self.current_token.value in ['between', 'from']:
                 return self.date_range()
             elif self.current_token.value in Lexer.MONTH_ALIASES.values():
@@ -215,6 +219,7 @@ class Parser:
         """
         Parses a date range expression, such as 'from ... to ...' or 'between ... and ...'.
         """
+        token = self.current_token
         self.eat(TokenType.IDENTIFIER)  # Consume 'from' or 'between'
         # Parse the start date expression
         start_tokens = []
@@ -226,6 +231,9 @@ class Parser:
         if self.current_token.type == TokenType.IDENTIFIER and self.current_token.value in ['and', 'to']:
             self.eat(TokenType.IDENTIFIER)
         else:
+            if token.value == 'from':
+                # special case, 'from' without 'to' or 'and'
+                return DateSpanNode({'type': 'half_bound', 'tokens': start_tokens, 'value': token.value})
             raise ParsingError(
                 f"Expected 'and' or 'to', got '{self.current_token.value!r}'",
                 self.current_token.line,
@@ -254,6 +262,21 @@ class Parser:
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'since', 'tokens': tokens})
+
+    def half_bound_date_span(self):
+        """
+        Parses date time spans with a one side bound like 'since', 'before', 'after' date expression,
+        e.g. as in 'since August 2024', 'after Friday' or 'before 2024'.
+        """
+        token = self.current_token
+        self.eat(TokenType.IDENTIFIER)  # Consume half bound keyword
+        tokens = []
+        while self.current_token.type != TokenType.EOF and \
+              not (self.current_token.type == TokenType.PUNCTUATION or
+                   self.current_token.type == TokenType.SEMICOLON):
+            tokens.append(self.current_token)
+            self.eat(self.current_token.type)
+        return DateSpanNode({'type': 'half_bound', 'tokens': tokens, 'value': token.value})
 
     def relative_date_span(self):
         """
