@@ -3,8 +3,8 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "datespanlib"
-description = "A library for handling date spans."
+name = "datespan"
+description = "Effortless date span parsing and management."
 keywords = ['python', 'datetime', 'timespan', 'pandas', 'numpy', 'spark', 'data analysis', 'sql', 'dataframe', ]
 classifiers = [
     "Intended Audience :: Science/Research",
@@ -37,12 +37,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Zeutschler/DateSpanLib"
-Documentation = "https://github.com/Zeutschler/DateSpanLib"
-Repository = "https://github.com/Zeutschler/DateSpanLib.git"
-Issues = "https://github.com/Zeutschler/DateSpanLib/issues"
-Changelog = "https://github.com/Zeutschler/DateSpanLib/CHANGELOG.md"
-pypi = "https://pypi.org/project/datespanlib/"
+Homepage = "https://github.com/Zeutschler/datespan"
+Documentation = "https://github.com/Zeutschler/datespan"
+Repository = "https://github.com/Zeutschler/datespan.git"
+Issues = "https://github.com/Zeutschler/datespan/issues"
+Changelog = "https://github.com/Zeutschler/datespan/CHANGELOG.md"
+pypi = "https://pypi.org/project/datespan/"
 
 [tool.setuptools.dynamic]
-version = {attr = "datespanlib.__version__"}
+version = {attr = "datespan.__version__"}

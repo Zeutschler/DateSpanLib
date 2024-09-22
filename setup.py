@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
-# setup.py for cubedpandas
 
 from setuptools import setup
 from setuptools import find_packages
-from datespan import VERSION as DATESPANLIB_VERSION
+from datespan import VERSION
 
 
 # ...to run the build and deploy process to pypi.org manually:
@@ -12,29 +11,13 @@ from datespan import VERSION as DATESPANLIB_VERSION
 # 1. empty folder 'dist'
 # 2. python3 setup.py sdist bdist_wheel   # note: Wheel need to be installed: pip install wheel
 # 3. twine upload -r  pypi dist/*         # note: Twine need to be installed: pip install twine
-
-# ... via Github actions
+# ... via GitHub actions see
 # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 
-VERSION = DATESPANLIB_VERSION
-DESCRIPTION = "DateSpan - A date and time span parsing and utilization library for data analysis and processing"
+DESCRIPTION = "datespan - effortless date span parsing and management"
 LONG_DESCRIPTION = """
-A Python library for handling and using data and time spans. 
-
-```python
-from datespan import DateSpan
-
-ds = DateSpan("January to March 2024")
-print("2024-04-15" in ds + "1 month")  # returns True  
-```
-
-The DateSpanLib library is designed to be used for data analysis and data processing, 
-where date and time spans are often used to filter, aggregate or join data. But it 
-should also be valuable in any other context where date and time spans are used.
-
-It provides dependency free integrations with Pandas, Numpy, Spark and others, can 
-generate Python code artefacts, either as source text or as precompiled (lambda) 
-functions and can also generate SQL fragments for filtering in SQL WHERE clauses.
+A Python package for effortless date span parsing and management. 
+Aimed for data analysis and processing, useful in any context requiring date & time spans.
 """
 
 setup(
@@ -49,7 +32,7 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Information Analysis",
         "Topic :: Scientific/Engineering :: Mathematics",
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Environment :: Console",

@@ -34,7 +34,7 @@ def parse(datespan_text: str,  parser_info: parserinfo | None = None) -> DateSpa
         The DateSpanSet instance contain 0 to N DateSpan objects derived from the given text.
 
     Examples:
-        >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
+        >>> DateSpanSet('last month')  # if today would be 2024-02-12
         DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
     """
     return DateSpanSet(definition=datespan_text, parser_info=parser_info)

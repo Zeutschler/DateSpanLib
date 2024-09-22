@@ -1,4 +1,4 @@
-# datespan - convenient data span parsing & handling
+# datespan - effortless date span parsing and management
 
 ![GitHub license](https://img.shields.io/github/license/Zeutschler/datespan?color=A1C547)
 ![PyPI version](https://img.shields.io/pypi/v/datespan?logo=pypi&logoColor=979DA4&color=A1C547)
@@ -9,7 +9,7 @@
 ![codecov](https://codecov.io/github/Zeutschler/datespan/graph/badge.svg?token=B12O0B6F10)
 
 -----------------
-A Python package for convenient **data span** parsing and handling. 
+A Python package for effortless date span parsing and management. 
 Aimed for data analysis and processing, useful in any context requiring date & time spans.   
 
 ```bash
