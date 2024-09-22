@@ -1,7 +1,7 @@
-from anyio.lowlevel import current_token
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
-from datespanlib.parser.errors import ParsingError
-from datespanlib.parser.lexer import Token, TokenType, Lexer
+from datespan.parser.errors import ParsingError
+from datespan.parser.lexer import Token, TokenType, Lexer
 
 
 class ASTNode:
@@ -18,6 +18,8 @@ class DateSpanNode(ASTNode):
     def __init__(self, value):
         self.value = value  # Dictionary containing details about the date span
 
+    def __str__(self):
+        return f"DateSpanNode({self.value})"
 
 class Parser:
     """
@@ -29,12 +31,25 @@ class Parser:
         self.text = text
         self.pos = 0  # Current position in the token list
         self.current_token = self.tokens[self.pos]
+        self.statements = [] if text is None else text.split(';')
         self.ast = None  # Store the abstract syntax tree
 
     def __str__(self):
         return f"Parser('{self.text}')"
     def __repr__(self):
         return f"Parser('{self.text}')"
+
+    @property
+    def previous_token(self):
+        """
+        Returns the previous token in the list.
+        """
+        return self.tokens[self.pos - 1] if self.pos > 0 else Token(TokenType.START, line=0, column=0)
+
+    @property
+    def next_token(self):
+        """ Returns the next token in the list. """
+        return self.tokens[self.pos + 1] if self.pos < len(self.tokens) - 1 else Token(TokenType.EOF, line=0, column=0)
 
 
     def eat(self, token_type):
@@ -74,6 +89,14 @@ class Parser:
                     self.eat(TokenType.SEMICOLON)
                 else:
                     break  # No more statements
+
+            # add remaining tokens
+            if self.pos < len(self.tokens) - 1:
+                node = statements[-1][-1].value
+                if 'tokens' not in node:
+                    node['tokens'] = []
+                node["tokens"].extend(self.tokens[self.pos:-1])
+
             self.ast = statements
             return statements
         except Exception as e:
@@ -92,6 +115,9 @@ class Parser:
                (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and'):
                 self.eat(self.current_token.type)  # Consume ',' or 'and'
             else:
+                if self.current_token.type == TokenType.TIME:
+                    node = self.date_span()
+                    date_spans.append(node)
                 break  # End of date spans in this statement
         return date_spans
 
@@ -104,8 +130,6 @@ class Parser:
                 return self.iterative_date_span()
             elif self.current_token.value in ['last', 'next', 'past', 'previous', 'rolling', 'this']:
                 return self.relative_date_span()
-            # elif self.current_token.value == 'since':
-            #     return self.since_date_span()
             elif self.current_token.value in ['after', 'before', 'since', 'until']:
                 return self.half_bound_date_span()
             elif self.current_token.value in ['between', 'from']:
@@ -322,6 +346,12 @@ class Parser:
         if self.current_token.type == TokenType.NUMBER:
             tokens.append(self.current_token)  # Append the year
             self.eat(TokenType.NUMBER)
+
+        # optional eat trailing time tokens
+        if self.current_token.type == TokenType.TIME_UNIT:
+            tokens.append(self.current_token)
+            self.eat(TokenType.TIME_UNIT)
+
         return DateSpanNode({'type': 'months', 'tokens': tokens})
 
     def day_date_span(self):

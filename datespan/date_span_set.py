@@ -1,4 +1,4 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from __future__ import annotations
 from typing import Any
@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime, date, time
 from dateutil.parser import parserinfo
 
-from datespanlib.parser.datespanparser import DateSpanParser
-from datespanlib.date_span import DateSpan
+from datespan.parser.datespanparser import DateSpanParser
+from datespan.date_span import DateSpan
 
 
 class DateSpanSet:
@@ -35,16 +35,33 @@ class DateSpanSet:
         self._definition = definition
         self._parser_info: parserinfo | None = parser_info
         self._iter_index = 0
+
         if definition is not None:
             expressions = []
             if isinstance(definition, DateSpan | str | datetime | time | date):
                 expressions.append(definition)
+            elif isinstance(definition, DateSpanSet):
+                self._definition = definition._definition
+                expressions.extend(definition._spans)
             elif isinstance(definition, list | tuple):
+                definitions = []
                 for item in definition:
-                    if isinstance(item, DateSpan | str | datetime | time | date):
+                    if isinstance(item, DateSpan):
+                        definitions.append(str(item._arg_start))
                         expressions.append(item)
+                    elif isinstance(item, DateSpanSet):
+                        definitions.append(str(item._definition))
+                        expressions.extend(item._spans)
+                    elif isinstance(item,  datetime | time | date):
+                        definitions.append(str(item))
+                        expressions.append(item)
+                    elif isinstance(item, str):
+                        dss = DateSpanSet(item)
+                        definitions.append(str(dss._definition))
+                        definitions.append(dss._spans)
                     else:
                         raise ValueError(f"Objects of type '{type(item)}' are not supported for DateSpanSet.")
+                self._definition = " + ".join(definitions)
             try:
                 for exp in expressions:
                     if isinstance(exp, DateSpan):
@@ -86,7 +103,7 @@ class DateSpanSet:
         return self.merge(other)
 
     def __sub__(self, other) -> DateSpanSet:
-        return self.intersect(other)
+        return self.subtract(other)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, DateSpanSet):
@@ -128,17 +145,24 @@ class DateSpanSet:
         return False
 
     def __contains__(self, item) -> bool:
+        test_spans = []
         if isinstance(item, DateSpan):
-            for span in self._spans:
-                if span == item:
-                    return True
-            return False
+            test_spans.append(item)
         elif isinstance(item, datetime):
-            for span in self._spans:
-                if span.contains(item):
-                    return True
-            return False
-        return False
+            test_spans.append(DateSpan(item))
+        elif isinstance(item, str):
+            test_spans.extend(DateSpanSet(item)._spans)
+        elif isinstance(item, DateSpanSet):
+            test_spans.extend(item._spans)
+        else:
+            return False # unsupported type
+
+        # todo: implement more efficient algorithm, check for start and end dates
+        for span in self._spans:
+            for test_span in test_spans:
+                if test_span not in span:
+                    return False
+        return True
 
     def __bool__(self) -> bool:
         return len(self._spans) > 0
@@ -149,6 +173,11 @@ class DateSpanSet:
     def __copy__(self) -> DateSpanSet:
         return self.clone()
     # endregion
+
+    @property
+    def spans(self) -> list[DateSpan]:
+        """Returns the list of DateSpan objects in the DateSpanSet."""
+        return self._spans
 
     @property
     def start(self) -> datetime | None:
@@ -174,11 +203,13 @@ class DateSpanSet:
 
     def add(self, other:DateSpanSet | DateSpan | str):
         """ Adds a new DateSpan object to the DateSpanSet."""
-        self.merge(other)
+        merged = self.merge(other)
+        self._spans = merged._spans
+        self._definition = merged._definition
 
     def remove(self, other:DateSpanSet | DateSpan | str):
         """ Removes a DateSpan object from the DateSpanSet."""
-        self.intersect(other)
+        self._spans = self.intersect(other)._spans
 
     def shift(self, years: int = 0, months: int = 0, days: int = 0, hours: int = 0, minutes: int = 0, seconds: int = 0,
               microseconds: int = 0, weeks: int = 0) -> DateSpanSet:
@@ -472,10 +503,14 @@ class DateSpanSet:
         Returns:
             A new DateSpanSet instance containing the merged date spans.
         """
-        raise NotImplementedError()
-        if isinstance(other, DateSpan | DateSpanSet | str):
+        if isinstance(other, DateSpan):
             return DateSpanSet([self, other])
-        return self.clone()
+        if isinstance(other, DateSpanSet):
+            return DateSpanSet([self, other])
+        if isinstance(other, str):
+            return DateSpanSet([self, DateSpanSet(other)])
+        raise ValueError(f"Objects of type '{type(other)}' are not supported for DateSpanSet merging.")
+
 
     def intersect(self, other:DateSpanSet | DateSpan | str) -> DateSpanSet:
         """
@@ -491,6 +526,55 @@ class DateSpanSet:
         """
         raise NotImplementedError()
 
+    def subtract(self, other:DateSpanSet | DateSpan | str) -> DateSpanSet:
+        """
+        Subtracts a DateSpanSet, DateSpan or a string representing a data span from the current DateSpanSet.
+        So, the resulting DateSpanSet will contain data spans that represent the current DataSpanSet minus
+        the date spans that are contained in the other DateSpanSet.
+
+        If there is no overlap between the current and the other DateSpanSet, a copy of the current DateSpanSet
+        will be returned.
+
+        Arguments:
+            other: The other DateSpanSet, DateSpan or string to subtract.
+
+        Returns:
+            A new DateSpanSet instance containing reduced DateSpanSet.
+        """
+        definitions = [str(self._definition)]
+        subtracts: list[DateSpan] = []
+        if isinstance(other, DateSpan):
+            definitions.append(f"({other._arg_start}, {other._arg_end})")
+            subtracts.append(other)
+        elif isinstance(other, DateSpanSet):
+            definitions.append(str(other._definition))
+            subtracts.extend(other._spans)
+        elif isinstance(other, str):
+            dss = DateSpanSet(other)
+            definitions.append(str(dss._definition))
+            subtracts.extend(dss._spans)
+        else:
+            raise ValueError(f"Objects of type '{type(other)}' are not supported for DateSpanSet subtraction.")
+
+        result = self.clone()
+        final = []
+        for sub in subtracts:
+
+            for i, span in enumerate(result._spans):
+                if span.overlaps_with(sub):
+                    result = span.subtract(sub, allow_split=True)
+                    if isinstance(result, DateSpan):
+                        if not result.is_undefined:
+                            final.append(result)
+                    else:
+                        final.extend(result)
+                else:
+                    final.append(span)
+        dss = DateSpanSet(final)
+        dss._definition = " - ".join(definitions)
+        return dss
+
+
     # end region
 
 
@@ -498,22 +582,30 @@ class DateSpanSet:
     # region Internal Methods
     def _merge_all(self):
         """
-        Merges all overlapping DateSpan objects in the set.
+        Merges all overlapping DateSpan objects if applicable.
         """
         if len(self._spans) < 2:
-            return
-        new_spans: list[DateSpan] = []
-        for span in self._spans:
-            if not new_spans:
-                new_spans.append(span)
+            return # special case, just one span = nothing to merge
+
+        self._spans.sort()
+
+        current:DateSpan = self._spans[0]
+        stack = self._spans[1:]
+        stack.reverse()
+        merged: list[DateSpan] = []
+
+        while True:
+            next: DateSpan = stack.pop()
+            if current.can_merge(next):
+                current = current.merge(next)
             else:
-                last = new_spans[-1]
-                if last.overlaps_with(span):
-                    new_spans[-1] = last.merge(span)
-                else:
-                    new_spans.append(span)
-                    new_spans.sort()
-        self._spans = new_spans
+                merged.append(current)
+                current = next
+            if not stack:
+                merged.append(current)
+                break
+
+        self._spans = merged
 
     def _parse(self, text: str | None = None):
         """
@@ -527,5 +619,6 @@ class DateSpanSet:
             for expr in expressions:
                 self._spans.extend([DateSpan(span[0], span[1]) for span in expr])
         except Exception as e:
+            self._message = str(e)
             raise ValueError(str(e))
     # endregion

@@ -1,6 +1,8 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import unittest
 from datetime import datetime, timedelta, time
-from datespanlib.date_span import DateSpan
+from datespan.date_span import DateSpan
 
 class TestDateSpan(unittest.TestCase):
 

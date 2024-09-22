@@ -1,6 +1,8 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import unittest
 from datetime import datetime, timedelta, time
-from datespanlib.date_span import DateSpan
+from datespan.date_span import DateSpan
 
 class TestDateSpan(unittest.TestCase):
 
@@ -203,6 +205,14 @@ class TestDateSpan(unittest.TestCase):
 
     def test_hash(self):
         self.assertEqual(hash(self.jan), hash((self.jan.start, self.jan.end)))
+
+    def test_parse_start_end(self):
+        result = DateSpan('2023-01-01', '2023-01-31')
+        self.assertEqual(result, self.jan)
+
+    def test_parse_start_end_text(self):
+        result = DateSpan('January 2023', 'March 2023')
+        self.assertEqual(result, self.jan_feb_mar)
 
 if __name__ == '__main__':
     unittest.main()

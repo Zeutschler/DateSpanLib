@@ -1,1 +1,8 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
+# required for the datespan package
 python-dateutil
+
+# for testing purposes
+pandas
+numpy

@@ -1,9 +1,9 @@
-from datespanlib.parser.errors import ParsingError, EvaluationError
-from datespanlib.parser.evaluator import Evaluator
-from datespanlib.parser.lexer import Lexer
-from datespanlib.parser.parser import Parser
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
-
+from datespan.parser.errors import ParsingError, EvaluationError
+from datespan.parser.evaluator import Evaluator
+from datespan.parser.lexer import Lexer
+from datespan.parser.parser import Parser
 
 class DateSpanParser:
     """

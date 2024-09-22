@@ -1,7 +1,9 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import re
 
 from dateutil import parser as dateutil_parser
-from datespanlib.parser.errors import ParsingError
+from datespan.parser.errors import ParsingError
 
 
 class Lexer:
@@ -392,6 +394,7 @@ class TokenType:
     TRIPLET = 'ROLLING'
     SEMICOLON = 'SEMICOLON'
     EOF = 'EOF'
+    START = 'START'
     UNKNOWN = 'UNKNOWN'  # For any unrecognized tokens
 
 

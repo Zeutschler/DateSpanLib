@@ -1,11 +1,13 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import unittest
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import random
 
-from datespanlib.parser.datespanparser import DateSpanParser
-from datespanlib.parser.errors import ParsingError, EvaluationError
-from datespanlib import DateSpan
+from datespan.parser.datespanparser import DateSpanParser
+from datespan.parser.errors import ParsingError, EvaluationError
+from datespan.date_span import DateSpan
 
 
 

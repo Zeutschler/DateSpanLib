@@ -1,10 +1,9 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from __future__ import annotations
 from datetime import datetime, time, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil.relativedelta import MO
-
 
 class DateSpan:
     """
@@ -14,17 +13,43 @@ class DateSpan:
     The DateSpan is immutable, all methods that change the DateSpan will return a new DateSpan.
     """
     TIME_EPSILON_MICROSECONDS = 100_000  # 0.1 seconds
-    """The time epsilon in microseconds used for comparison of time deltas."""
-    MIN_YEAR = 1700
+    """The time epsilon in microseconds used for detecting overlapping or consecutive date time spans."""
+    MIN_YEAR = datetime.min.year
     """The minimum year that can be represented by the DateSpan."""
-    MAX_YEAR = 2300
+    MAX_YEAR = datetime.max.year
     """The maximum year that can be represented by the DateSpan."""
 
-    def __init__(self, start: datetime | None = None, end: datetime | None = None, message: str | None = None):
-        self._start: datetime | None = start
-        self._end: datetime | None = end if end is not None else start
-        self._start, self._end = self._swap()
+    def __init__(self, start = None, end = None, message: str | None = None):
+        """
+        Initializes a new DateSpan with the given start and end date. If only one date is given, the DateSpan will
+        represent a single point in time. If no date is given, the DateSpan will be undefined.
+
+        If `start` and `end` are datetime objects, the DateSpan will be initialized with these datetimes.
+        If `start` is larger than `end`, the dates will be automatically swapped.
+
+        If `start` and/or `end` contains arbitrary date span text, the text will be parsed into a DateSpan.
+        If both `start` and `end` contain text that refer/resolve to distinct date span, then the resulting
+        DateSpan will start at the beginning of the first date span defined by `start` and the end at the end of the
+        second date span defined by `end`.
+
+        Raises:
+            ValueError: If arguments of the DateSpan are invalid, the DateSpan could not be parsed or the
+            parsing of the DateSpan would result in more than one DateSpan. For such cases use the DateSpanSet
+            class to parse multipart date spans.
+        """
+        self._arg_start = start
+        self._arg_end = end
         self._message: str | None = message
+
+        if isinstance(start, datetime | None) and isinstance(end, datetime | None):
+            self._start: datetime | None = start
+            self._end: datetime | None = end if end is not None else start
+            self._start, self._end = self._swap()
+        else:
+            try:
+                self._start, self._end = self._parse(start, end)
+            except ValueError as e:
+                raise e
 
     @property
     def message(self) -> str | None:
@@ -77,9 +102,7 @@ class DateSpan:
         """
         if self.is_undefined or other.is_undefined:
             return False
-        if self._start >= other._start:
-            return self._start <= other._end
-        return self._end >= other._start
+        return max(self._start, other._start) <= min(self._end, other._end)
 
     def consecutive_with(self, other: DateSpan) -> bool:
         """
@@ -117,6 +140,17 @@ class DateSpan:
         if self.overlaps_with(other) or self.consecutive_with(other):
             return DateSpan(min(self._start, other._start), max(self._end, other._end))
         raise ValueError("Cannot merge DateSpans that do not overlap or are not consecutive.")
+
+    def can_merge(self, other: DateSpan) -> bool:
+        """
+        Returns True if the DateSpan can be merged with the given DateSpan.
+        """
+        if self.is_undefined or other.is_undefined:
+            return True
+        return self.overlaps_with(other) or self.consecutive_with(other)
+
+
+
 
     def intersect(self, other: DateSpan) -> DateSpan:
         """
@@ -170,7 +204,7 @@ class DateSpan:
             return self.clone()
 
         if other._start < self._start:
-            # overalap at the start
+            # overlap at the start
             return DateSpan(other._end + timedelta(microseconds=1), self._end)
         # overlap at the end
         return DateSpan(self._start, other._start - timedelta(microseconds=1))
@@ -448,18 +482,6 @@ class DateSpan:
         """
         return (self._start == self._begin_of_day(self._start) and
                 self._end == self._end_of_day(self._end))
-
-
-    def _swap(self) -> DateSpan:
-        """Swap start and end date if start is greater than end."""
-        if self._start is None or self._end is None:
-            return self
-
-        if self._start > self._end:
-            tmp = self._start
-            self._start = self._end
-            self._end = tmp
-        return self
 
     def replace(self, year: int | None = None, month: int | None = None, day: int | None = None,
                 hour: int | None = None,
@@ -935,16 +957,9 @@ class DateSpan:
         if self.is_undefined:
             return "DateSpan(undefined)"
 
-        if self._start.microsecond != 0:
-            start = f"{self._start.strftime('%a %Y-%m-%d %H:%M:%S.%f')}"
-        else:
-            start = f"{self._start.strftime('%a %Y-%m-%d %H:%M:%S')}"
-
-        if self._end.microsecond != 0:
-            end = f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S.%f')})"
-        else:
-            end = f"{self._end.strftime('%a %Y-%m-%d %H:%M:%S')})"
-        return (f"DateSpan({start} <-> {end})")
+        start = f"'{self._arg_start}'" if isinstance(self._arg_start, str) else str(self._arg_start)
+        end = f"'{self._arg_end}'" if isinstance(self._arg_end, str) else str(self._arg_end)
+        return f"DateSpan({start}, {end})" # -> ('start': {self._start}, 'end': {self._end})"
 
     def __repr__(self):
         return self.__str__()
@@ -1024,3 +1039,45 @@ class DateSpan:
     def __hash__(self):
         return hash((self._start, self._end))
     # endregion
+
+    # region private methods
+    def _swap(self) -> DateSpan:
+        """Swap start and end date if start is greater than end."""
+        if self._start is None or self._end is None:
+            return self
+
+        if self._start > self._end:
+            tmp = self._start
+            self._start = self._end
+            self._end = tmp
+        return self
+
+    def _parse(self, start, end = None) -> (datetime, datetime):
+        """Parse a date span string."""
+        if end is None:
+            expected_spans = 1
+            text = start
+        else:
+            expected_spans = 2
+            text = f"{start}; {end}" # merge start and end into a single date span statement
+
+        self._message = None
+        try:
+            from datespan.parser.datespanparser import DateSpanParser # overcome circular import
+            date_span_parser: DateSpanParser = DateSpanParser(text)
+            expressions = date_span_parser.parse()  # todo: inject self.parser_info
+            if len(expressions) != expected_spans:
+                raise ValueError(f"The date span expression '{text}' resolves to "
+                                 f"more than just a single date span. "
+                                 f"Use 'DateSpanSet('{text}')' to parse multi-part date spans.")
+            if expected_spans == 2:
+                start = expressions[0][0][0]
+                end = expressions[1][0][1]
+            else:
+                start = expressions[0][0][0]
+                end = expressions[0][0][1]
+
+            return start, end
+        except Exception as e:
+            self._message = str(e)
+            raise ValueError(str(e))

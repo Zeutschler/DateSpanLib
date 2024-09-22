@@ -1,4 +1,4 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 import sys
 from unittest import TestCase
@@ -6,11 +6,11 @@ from datetime import datetime, time
 import numpy as np
 import pandas as pd
 
-from datespanlib.date_span_set import DateSpanSet
-from datespanlib.date_span import DateSpan
+from datespan.date_span_set import DateSpanSet
+from datespan.date_span import DateSpan
 
 
-# from datespanlib.parser_old.en.tokenizer import Tokenizer
+# from datespan.parser_old.en.tokenizer import Tokenizer
 
 
 class TestDateTextParser(TestCase):
@@ -108,6 +108,7 @@ class TestDateTextParser(TestCase):
 
     def test_advanced(self):
         samples = [
+            "from 2024-09-01 to 2024-09-10",
             "ly",
             "py",
             "ny",
@@ -155,7 +156,7 @@ class TestDateTextParser(TestCase):
             "from 2024-09-10 14:00:00.123 to 2024-09-10 15:00:00.789",
             "10/09/2024 14:00:00.123456",
 
-            "from 2024-09-01 to 2024-09-10",
+
             "between 09/01/2024 and 09/10/2024",
             "from 09.01.2024 to 09.10.2024",
             "between 2024-09-01 and 2024-09-10",

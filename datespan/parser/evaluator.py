@@ -1,14 +1,16 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import re
 from datetime import datetime, time, timedelta
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
-from datespanlib.parser import MIN_YEAR, MAX_YEAR
-from datespanlib.parser.errors import EvaluationError, ParsingError
-from datespanlib.parser.lexer import Token, TokenType, Lexer
-from datespanlib.parser.parser import Parser
-from datespanlib.date_span import DateSpan
+from datespan.parser import MIN_YEAR, MAX_YEAR
+from datespan.parser.errors import EvaluationError, ParsingError
+from datespan.parser.lexer import Token, TokenType, Lexer
+from datespan.parser.parser import Parser
+from datespan.date_span import DateSpan
 
 
 class Evaluator:
@@ -59,11 +61,8 @@ class Evaluator:
 
         elif node_type == 'range':
             return self.evaluate_range(node.value['start_tokens'], node.value['end_tokens'])
-        # elif node_type == 'since':
-        #     return self.evaluate_since(node.value['tokens'])
         elif node_type == 'half_bound':
             return self.evaluate_half_bound(node.value['tokens'], node.value['value'])
-
         elif node_type == 'iterative':
             return self.evaluate_iterative(node.value['tokens'], node.value['period_tokens'])
         else:
@@ -376,7 +375,7 @@ class Evaluator:
                 return self.calculate_this(unit)
             return []
 
-    def evaluate_special(self, value):
+    def evaluate_special(self, value, date_spans: list = None):
         """
         Evaluates a special date expression and returns the corresponding date span.
         """
@@ -388,15 +387,41 @@ class Evaluator:
             return DateSpan.tomorrow().to_tuple_list()
         elif value == 'now':
             return DateSpan.now().to_tuple_list()
-        elif value == 'ltm':
+
+        elif value == 'ltm': # last 12 month
+            if date_spans:
+                date_spans.sort()
+                base = date_spans[-1][1] # latest end date
+                span = DateSpan(base).shift_start(years=-1)
+                return span.to_tuple_list()
             return DateSpan().ltm.to_tuple_list()
         elif value == 'ytd':
+            if date_spans:
+                date_spans.sort()
+                base = date_spans[-1][1] # latest end date
+                span = DateSpan(DateSpan(base).full_year.start, base)
+                return span.to_tuple_list()
             return DateSpan().ytd.to_tuple_list()
         elif value == 'qtd':
+            if date_spans:
+                date_spans.sort()
+                base = date_spans[-1][1] # latest end date
+                span = DateSpan(DateSpan(base).full_quarter.start, base)
+                return span.to_tuple_list()
             return DateSpan().qtd.to_tuple_list()
         elif value == 'mtd':
+            if date_spans:
+                date_spans.sort()
+                base = date_spans[-1][1] # latest end date
+                span = DateSpan(DateSpan(base).full_month.start, base)
+                return span.to_tuple_list()
             return DateSpan().mtd.to_tuple_list()
         elif value == 'wtd':
+            if date_spans:
+                date_spans.sort()
+                base = date_spans[-1][1] # latest end date
+                span = DateSpan(DateSpan(base).full_week.start, base)
+                return span.to_tuple_list()
             return DateSpan().wtd.to_tuple_list()
 
         # catch the following single words as specials
@@ -454,7 +479,19 @@ class Evaluator:
         elif relative == 'n':
             return self.calculate_future(number, unit)
 
-
+    def _extract_special_token(self, tokens) -> (list[Token], Token):
+        """
+        Extracts a special token from the list of tokens if it exists.
+        """
+        if tokens[-1].type == TokenType.SPECIAL:
+            special_token = tokens[-1]
+            tokens = tokens[:-1]
+            return tokens, special_token
+        elif tokens[0].type == TokenType.SPECIAL:
+            special_token = tokens[0]
+            tokens = tokens[1:]
+            return tokens, special_token
+        return tokens, None
 
     def evaluate_months(self, tokens):
         """
@@ -463,6 +500,13 @@ class Evaluator:
         months = []
         year = self.today.year  # Default to current year
         idx = 0
+        if not tokens:
+            return []
+
+        # check if the last token is a special like 'ytd'
+        tokens, special_token = self._extract_special_token(tokens)
+
+
         # Check if the last token is a number (year)
         if tokens and tokens[-1].type == TokenType.NUMBER:
             year = tokens[-1].value
@@ -482,6 +526,10 @@ class Evaluator:
             start = datetime.combine(from_date.date(), time.min)
             end = datetime.combine(to_date.date(), time.max)
             date_spans.append((start, end))
+
+        if special_token is not None:
+            date_spans = self.evaluate_special(special_token.value, date_spans)
+
         return date_spans
 
     def evaluate_days(self, tokens):

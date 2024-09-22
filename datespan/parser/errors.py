@@ -1,3 +1,5 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 class ParsingError(Exception):
     """
     Exception raised when a parsing error occurs, including position and token information.

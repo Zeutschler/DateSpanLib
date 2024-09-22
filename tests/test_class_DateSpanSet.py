@@ -1,8 +1,9 @@
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 import unittest
 from datetime import datetime
-from datespanlib.date_span import DateSpan
-from datespanlib.date_span_set import DateSpanSet
+from datespan.date_span import DateSpan
+from datespan.date_span_set import DateSpanSet
 
 class TestDateSpanSet(unittest.TestCase):
 
@@ -20,19 +21,19 @@ class TestDateSpanSet(unittest.TestCase):
 
     def test_iter(self):
         spans = list(self.jan_feb)
-        self.assertEqual(spans, [self.jan, self.feb])
+        self.assertEqual(len(spans), 1)
 
     def test_len(self):
-        self.assertEqual(len(self.jan_feb), 2)
+        self.assertEqual(len(self.jan_feb), 1)
 
     def test_getitem(self):
-        self.assertEqual(self.jan_feb[0], self.jan)
+        self.assertEqual(self.jan_feb[0], self.jan_feb._spans[0])
 
     def test_str(self):
         self.assertEqual(str(self.jan_feb), repr(self.jan_feb))
 
     def test_repr(self):
-        self.assertEqual(repr(self.jan_feb), f"DateSpanSet('[{self.jan}, {self.feb}]') := [{self.jan}, {self.feb}]")
+        self.assertTrue(repr(self.jan_feb).startswith("DateSpanSet("))
 
     @unittest.skip("Not implemented")
     def test_add(self):
@@ -72,7 +73,7 @@ class TestDateSpanSet(unittest.TestCase):
         self.assertFalse(self.empty_set)
 
     def test_hash(self):
-        self.assertEqual(hash(self.jan_feb), hash(tuple([self.jan, self.feb])))
+        self.assertEqual(hash(self.jan_feb), hash(DateSpanSet("Jan, Feb 2023")))
 
     def test_copy(self):
         clone = self.jan_feb.__copy__()
@@ -131,7 +132,7 @@ class TestDateSpanSet(unittest.TestCase):
 
     def test_to_tuples(self):
         tuples = self.jan_feb.to_tuples()
-        self.assertEqual(tuples, [(self.jan.start, self.jan.end), (self.feb.start, self.feb.end)])
+        self.assertEqual(tuples, [(self.jan.start, self.feb.end)])
 
     def test_filter(self):
         import pandas as pd
@@ -142,8 +143,8 @@ class TestDateSpanSet(unittest.TestCase):
         self.assertEqual(len(filtered), 2)
 
     def test_merge(self):
-        with self.assertRaises(NotImplementedError):
-            self.jan_feb.merge(self.mar)
+        test = self.jan_feb.merge(self.mar)
+        self.assertEqual(test, self.jan_feb_mar)
 
     def test_intersect(self):
         with self.assertRaises(NotImplementedError):

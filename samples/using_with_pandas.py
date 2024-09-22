@@ -1,10 +1,8 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
-# ----------------------------------------------------------------------------
-# A simple example using DateSpanLib with pandas
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from datetime import datetime
 import pandas as pd
-from datespanlib import DateSpanSet, DateSpan, parse
+from datespan import DateSpanSet, DateSpan, parse
 
 df = pd.DataFrame.from_dict({
     "product": ["A", "B", "C", "A", "B", "C"],

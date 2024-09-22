@@ -1,13 +1,13 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from __future__ import annotations
 from dateutil.parser import parserinfo
 
-from datespanlib.date_span import DateSpan
-from datespanlib.date_span_set import DateSpanSet
+from datespan.date_span import DateSpan
+from datespan.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
-__version__ = "0.1.8"
+__version__ = "0.2.0"
 __license__ = "MIT"
 VERSION = __version__
 
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-def parse(datespan_text: str, language: str | None = "en", parser_info: parserinfo | None = None) -> DateSpanSet:
+def parse(datespan_text: str,  parser_info: parserinfo | None = None) -> DateSpanSet:
     """
     Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects.
 
@@ -37,4 +37,4 @@ def parse(datespan_text: str, language: str | None = "en", parser_info: parserin
         >>> DateSpanSet.evaluate('last month')  # if today would be in February 2024
         DateSpanSet([DateSpan(datetime.datetime(2024, 1, 1, 0, 0), datetime.datetime(2024, 1, 31, 23, 59, 59, 999999))])
     """
-    return DateSpanSet(datespan_text, language, parser_info)
+    return DateSpanSet(definition=datespan_text, parser_info=parser_info)

@@ -1,10 +1,9 @@
-# DateSpanLib - Copyright (c)2024, Thomas Zeutschler, MIT license
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
+
 import sys
 from unittest import TestCase
 from datetime import date, datetime, time, timedelta
-from dateutil.parser import parse
-
-from datespanlib import DateSpan, DateSpanSet, parse
+from datespan.date_span import DateSpan
 
 
 class TestDateSpan(TestCase):

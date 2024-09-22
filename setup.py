@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+# datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 # setup.py for cubedpandas
 
 from setuptools import setup
 from setuptools import find_packages
-from datespanlib import VERSION as DATESPANLIB_VERSION
+from datespan import VERSION as DATESPANLIB_VERSION
 
 
 # ...to run the build and deploy process to pypi.org manually:
@@ -16,12 +17,12 @@ from datespanlib import VERSION as DATESPANLIB_VERSION
 # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 
 VERSION = DATESPANLIB_VERSION
-DESCRIPTION = "DateSpanLib - A date and time span parsing and utilization library for data analysis and processing"
+DESCRIPTION = "DateSpan - A date and time span parsing and utilization library for data analysis and processing"
 LONG_DESCRIPTION = """
 A Python library for handling and using data and time spans. 
 
 ```python
-from datespanlib import DateSpan
+from datespan import DateSpan
 
 ds = DateSpan("January to March 2024")
 print("2024-04-15" in ds + "1 month")  # returns True  
@@ -38,7 +39,7 @@ functions and can also generate SQL fragments for filtering in SQL WHERE clauses
 
 setup(
 
-    name="DataSpanLib",
+    name="dataspan",
     version=VERSION,
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
@@ -67,7 +68,7 @@ setup(
     author="Thomas Zeutschler",
     keywords=['python', 'datetime', 'timespan', 'pandas', 'numpy', 'spark', 'data analysis', 'sql', 'dataframe', 'data'],
     author_email="cubedpandas@gmail.com",
-    url="https://github.com/Zeutschler/datespanlib",
+    url="https://github.com/Zeutschler/datespan",
     license='MIT',
     platforms=['any'],
     zip_safe=True,
@@ -75,11 +76,11 @@ setup(
     install_requires=[
         'python-dateutil',
     ],
-    test_suite="datespanlib.tests",
-    packages=['datespanlib', 'datespanlib.parser', 'tests'],
+    test_suite="datespan.tests",
+    packages=['datespan', 'datespan.parser', 'tests'],
     project_urls={
-        'Homepage': 'https://github.com/Zeutschler/datespanlib',
-        'Documentation': 'https://github.com/Zeutschler/datespanlib',
-        'GitHub': 'https://github.com/Zeutschler/datespanlib',
+        'Homepage': 'https://github.com/Zeutschler/datespan',
+        'Documentation': 'https://github.com/Zeutschler/datespan',
+        'GitHub': 'https://github.com/Zeutschler/datespan',
     },
 )
