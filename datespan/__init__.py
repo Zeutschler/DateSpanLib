@@ -7,7 +7,7 @@ from datespan.date_span import DateSpan
 from datespan.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __license__ = "MIT"
 VERSION = __version__
 

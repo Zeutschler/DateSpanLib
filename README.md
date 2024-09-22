@@ -46,8 +46,8 @@ ranging from simple dates like '2021-01-01' up to complex date span expressions 
 'Mondays to Wednesday last month'. For internal DateTime parsing and manipulation, the 
 [DateUtil]() library is used. 
 
-### Classes
+### Part of the CubedPandas Project
 The 'dataspan' package has been carved out from the 
-[CubedPandas](https://github.com/Zeutschler/cubedpandas) project - a library for 
- data analysis with Pandas dataframes - as DataSpan serves a broader purpose and 
-can be used independently of CubedPandas. 
+[CubedPandas](https://github.com/Zeutschler/cubedpandas) project, a library for 
+easy, fast & fun data analysis with Pandas dataframes, as DataSpan serves a broader 
+scope and purpose and can be used independently of CubedPandas. 
