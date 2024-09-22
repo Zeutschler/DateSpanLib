@@ -6,11 +6,11 @@ from datetime import datetime, time, timedelta
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
+from datespan.date_span import DateSpan
 from datespan.parser import MIN_YEAR, MAX_YEAR
 from datespan.parser.errors import EvaluationError, ParsingError
 from datespan.parser.lexer import Token, TokenType, Lexer
 from datespan.parser.parser import Parser
-from datespan.date_span import DateSpan
 
 
 class Evaluator:
@@ -18,6 +18,7 @@ class Evaluator:
     The Evaluator class takes the AST produced by the parser_old and computes the actual date spans.
     It handles the logic of converting relative dates and special keywords into concrete date ranges.
     """
+
     def __init__(self, statements):
         self.statements = statements  # List of statements (AST nodes)
         self.today = datetime.today()  # Current date and time
@@ -106,7 +107,6 @@ class Evaluator:
                 start = datetime.combine(date.date(), date.time())
                 end = start + timedelta(seconds=1, microseconds=-1)
 
-
         return [(start, end)]
 
     def evaluate_range(self, start_tokens, end_tokens):
@@ -190,7 +190,8 @@ class Evaluator:
         try:
             ast_nodes = parser.parse_statement()
         except ParsingError as e:
-            raise EvaluationError(f"Failed to parse date of date span after 'since', 'after', 'before', or 'until': {e}")
+            raise EvaluationError(
+                f"Failed to parse date of date span after 'since', 'after', 'before', or 'until': {e}")
         if not ast_nodes:
             raise EvaluationError(f"Date of date span missing after "
                                   f"'since', 'after', 'before', or 'until'.")
@@ -204,7 +205,7 @@ class Evaluator:
             raise EvaluationError(f"Failed to evaluate date of date span after "
                                   f"'since', 'after', 'before', or 'until'.")
 
-        if keyword  == 'since':
+        if keyword == 'since':
             start_date = spans[0][0]
             end_date = self.today
         elif keyword == 'from':
@@ -221,8 +222,6 @@ class Evaluator:
                 f"Failed to evaluate date or datespan. Expected 'since', "
                 f"'after', 'before', or 'until' but got '{keyword}'.")
         return [(start_date, end_date)]
-
-
 
     def evaluate_iterative(self, tokens, period_tokens):
         """
@@ -357,10 +356,9 @@ class Evaluator:
                     return self.evaluate_special(token.value)
             idx += 1
 
-
-        if direction == 'previous': # incl. 'last'
+        if direction == 'previous':  # incl. 'last'
             return self.calculate_previous(number, unit)
-        if direction == 'rolling': # incl. 'past'
+        if direction == 'rolling':  # incl. 'past'
             return self.calculate_rolling(number, unit)
         if direction == 'next':
             return self.calculate_future(number, unit)
@@ -370,7 +368,7 @@ class Evaluator:
         if ordinal is not None:
             # Handle expressions like '1st Monday'
             return self.calculate_nth_weekday_in_period(ordinal, unit)
-        else: # direction = None
+        else:  # direction = None
             if unit in ['day', 'week', 'month', 'year', 'quarter']:
                 return self.calculate_this(unit)
             return []
@@ -388,38 +386,38 @@ class Evaluator:
         elif value == 'now':
             return DateSpan.now().to_tuple_list()
 
-        elif value == 'ltm': # last 12 month
+        elif value == 'ltm':  # last 12 month
             if date_spans:
                 date_spans.sort()
-                base = date_spans[-1][1] # latest end date
+                base = date_spans[-1][1]  # latest end date
                 span = DateSpan(base).shift_start(years=-1)
                 return span.to_tuple_list()
             return DateSpan().ltm.to_tuple_list()
         elif value == 'ytd':
             if date_spans:
                 date_spans.sort()
-                base = date_spans[-1][1] # latest end date
+                base = date_spans[-1][1]  # latest end date
                 span = DateSpan(DateSpan(base).full_year.start, base)
                 return span.to_tuple_list()
             return DateSpan().ytd.to_tuple_list()
         elif value == 'qtd':
             if date_spans:
                 date_spans.sort()
-                base = date_spans[-1][1] # latest end date
+                base = date_spans[-1][1]  # latest end date
                 span = DateSpan(DateSpan(base).full_quarter.start, base)
                 return span.to_tuple_list()
             return DateSpan().qtd.to_tuple_list()
         elif value == 'mtd':
             if date_spans:
                 date_spans.sort()
-                base = date_spans[-1][1] # latest end date
+                base = date_spans[-1][1]  # latest end date
                 span = DateSpan(DateSpan(base).full_month.start, base)
                 return span.to_tuple_list()
             return DateSpan().mtd.to_tuple_list()
         elif value == 'wtd':
             if date_spans:
                 date_spans.sort()
-                base = date_spans[-1][1] # latest end date
+                base = date_spans[-1][1]  # latest end date
                 span = DateSpan(DateSpan(base).full_week.start, base)
                 return span.to_tuple_list()
             return DateSpan().wtd.to_tuple_list()
@@ -448,7 +446,7 @@ class Evaluator:
             year = DateSpan.now().start.year
             quarter = int(value[1])
             month = 3 * (quarter - 1) + 1
-            return DateSpan(datetime(year= year, month=month, day=1)).full_quarter.to_tuple_list()
+            return DateSpan(datetime(year=year, month=month, day=1)).full_quarter.to_tuple_list()
         elif value == 'py':
             return DateSpan.now().shift(years=-1).full_year.to_tuple_list()
         elif value == 'cy':
@@ -460,7 +458,7 @@ class Evaluator:
         else:
             return []
 
-    def evaluate_triplet(self, triplet:str):
+    def evaluate_triplet(self, triplet: str):
 
         if not ((triplet[0] in ['r', 'p', 'l', 'n']) and
                 (triplet[-1] in ['d', 'w', 'm', 'q', 'y']) and
@@ -474,7 +472,7 @@ class Evaluator:
         unit = unit_map[unit_char]
         if relative in ['r']:
             return self.calculate_rolling(number, unit)
-        elif relative  in ['l', 'p']:
+        elif relative in ['l', 'p']:
             return self.calculate_previous(number, unit)
         elif relative == 'n':
             return self.calculate_future(number, unit)
@@ -505,7 +503,6 @@ class Evaluator:
 
         # check if the last token is a special like 'ytd'
         tokens, special_token = self._extract_special_token(tokens)
-
 
         # Check if the last token is a number (year)
         if tokens and tokens[-1].type == TokenType.NUMBER:
@@ -575,7 +572,7 @@ class Evaluator:
         'rolling 3 months': Refers to a rolling 3-month window, starting from today’s date.
         Note: Rolling and past are synonyms.
         """
-        if unit == 'month': # most used units first
+        if unit == 'month':  # most used units first
             return DateSpan.now().shift_start(months=-number).to_tuple_list()
         elif unit == 'year':
             return DateSpan.now().shift_start(years=-number).to_tuple_list()
@@ -602,7 +599,7 @@ class Evaluator:
         'previous 3 months': Refers to the full 3 calendar months immediately before the current month.
         Note: Previous and last are synonyms.
         """
-        if unit == 'month': # most used units first
+        if unit == 'month':  # most used units first
             return DateSpan.today().shift(months=-1).full_month.shift_start(months=-(number - 1)).to_tuple_list()
         elif unit == 'year':
             return DateSpan.today().shift(years=-1).full_year.shift_start(years=-(number - 1)).to_tuple_list()
@@ -619,10 +616,10 @@ class Evaluator:
         elif unit == 'second':
             return DateSpan.now().shift(seconds=-1).full_second.shift_start(seconds=-(number - 1)).to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().shift(microseconds=-1000).full_millisecond.shift_start(microseconds=-(number - 1) * 1000).to_tuple_list()
+            return DateSpan.now().shift(microseconds=-1000).full_millisecond.shift_start(
+                microseconds=-(number - 1) * 1000).to_tuple_list()
         else:
             return []
-
 
     def calculate_future(self, number, unit):
         """
@@ -637,7 +634,7 @@ class Evaluator:
         elif unit == 'year':
             return DateSpan.today().shift(years=1).full_year.shift_end(years=(number - 1)).to_tuple_list()
         elif unit == 'quarter':
-            return DateSpan.today().shift(months=3).full_quarter.shift_end(months=(number - 1)*3).to_tuple_list()
+            return DateSpan.today().shift(months=3).full_quarter.shift_end(months=(number - 1) * 3).to_tuple_list()
         elif unit == 'hour':
             return DateSpan.now().shift(hours=1).full_hour.shift_end(hours=number - 1).to_tuple_list()
         elif unit == 'minute':
@@ -645,10 +642,10 @@ class Evaluator:
         elif unit == 'second':
             return DateSpan.now().shift(seconds=1).full_second.shift_end(seconds=number - 1).to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().shift(microseconds=1000).full_millisecond.shift_end(microseconds=(number - 1) * 1000).to_tuple_list()
+            return DateSpan.now().shift(microseconds=1000).full_millisecond.shift_end(
+                microseconds=(number - 1) * 1000).to_tuple_list()
         else:
             return []
-
 
     def calculate_this(self, unit):
         """

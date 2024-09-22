@@ -15,18 +15,21 @@ class DateSpanNode(ASTNode):
     """
     Represents a date span node in the AST, which can be a specific date, relative period, or range.
     """
+
     def __init__(self, value):
         self.value = value  # Dictionary containing details about the date span
 
     def __str__(self):
         return f"DateSpanNode({self.value})"
 
+
 class Parser:
     """
     The Parser class processes the list of tokens and builds an abstract syntax tree (AST).
     It follows the grammar rules to parse date expressions.
     """
-    def __init__(self, tokens, text = None):
+
+    def __init__(self, tokens, text=None):
         self.tokens = tokens
         self.text = text
         self.pos = 0  # Current position in the token list
@@ -36,6 +39,7 @@ class Parser:
 
     def __str__(self):
         return f"Parser('{self.text}')"
+
     def __repr__(self):
         return f"Parser('{self.text}')"
 
@@ -50,7 +54,6 @@ class Parser:
     def next_token(self):
         """ Returns the next token in the list. """
         return self.tokens[self.pos + 1] if self.pos < len(self.tokens) - 1 else Token(TokenType.EOF, line=0, column=0)
-
 
     def eat(self, token_type):
         """
@@ -112,7 +115,7 @@ class Parser:
             node = self.date_span()
             date_spans.append(node)
             if self.current_token.type == TokenType.PUNCTUATION or \
-               (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and'):
+                    (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and'):
                 self.eat(self.current_token.type)  # Consume ',' or 'and'
             else:
                 if self.current_token.type == TokenType.TIME:
@@ -159,7 +162,7 @@ class Parser:
         elif self.current_token.type == TokenType.NUMBER or self.current_token.type == TokenType.ORDINAL:
             return self.relative_date_span()
         elif self.current_token.type == TokenType.TIME_UNIT:
-            if len(self.tokens) <=2 and self.tokens[-1].type == TokenType.EOF:
+            if len(self.tokens) <= 2 and self.tokens[-1].type == TokenType.EOF:
                 # single word month, quarter, year, week, hour, minute, second or millisecond, handle as specials
                 self.current_token.type = TokenType.SPECIAL
                 return self.special_date_span()
@@ -209,8 +212,8 @@ class Parser:
         # Collect period tokens
         period_tokens = []
         while self.current_token.type != TokenType.EOF and \
-              not (self.current_token.type == TokenType.PUNCTUATION or
-                   self.current_token.type == TokenType.SEMICOLON):
+                not (self.current_token.type == TokenType.PUNCTUATION or
+                     self.current_token.type == TokenType.SEMICOLON):
             period_tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'iterative', 'tokens': tokens, 'period_tokens': period_tokens})
@@ -238,7 +241,6 @@ class Parser:
         self.eat(token_type)
         return DateSpanNode({'type': 'specific_date', 'date': time_value})
 
-
     def date_range(self):
         """
         Parses a date range expression, such as 'from ... to ...' or 'between ... and ...'.
@@ -248,7 +250,7 @@ class Parser:
         # Parse the start date expression
         start_tokens = []
         while self.current_token.type != TokenType.EOF and \
-              not (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value in ['and', 'to']):
+                not (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value in ['and', 'to']):
             start_tokens.append(self.current_token)
             self.eat(self.current_token.type)
         # Consume 'and' or 'to'
@@ -267,9 +269,9 @@ class Parser:
         # Parse the end date expression
         end_tokens = []
         while self.current_token.type != TokenType.EOF and \
-              not (self.current_token.type == TokenType.PUNCTUATION or
-                   self.current_token.type == TokenType.SEMICOLON or
-                   (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and')):
+                not (self.current_token.type == TokenType.PUNCTUATION or
+                     self.current_token.type == TokenType.SEMICOLON or
+                     (self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and')):
             end_tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'range', 'start_tokens': start_tokens, 'end_tokens': end_tokens})
@@ -281,8 +283,8 @@ class Parser:
         self.eat(TokenType.IDENTIFIER)  # Consume 'since'
         tokens = []
         while self.current_token.type != TokenType.EOF and \
-              not (self.current_token.type == TokenType.PUNCTUATION or
-                   self.current_token.type == TokenType.SEMICOLON):
+                not (self.current_token.type == TokenType.PUNCTUATION or
+                     self.current_token.type == TokenType.SEMICOLON):
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'since', 'tokens': tokens})
@@ -296,8 +298,8 @@ class Parser:
         self.eat(TokenType.IDENTIFIER)  # Consume half bound keyword
         tokens = []
         while self.current_token.type != TokenType.EOF and \
-              not (self.current_token.type == TokenType.PUNCTUATION or
-                   self.current_token.type == TokenType.SEMICOLON):
+                not (self.current_token.type == TokenType.PUNCTUATION or
+                     self.current_token.type == TokenType.SEMICOLON):
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'half_bound', 'tokens': tokens, 'value': token.value})
@@ -307,7 +309,8 @@ class Parser:
         Parses a relative date span, such as 'last week' or 'next 3 months'.
         """
         tokens = []
-        while self.current_token.type in [TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.ORDINAL, TokenType.TIME_UNIT, TokenType.SPECIAL]:
+        while self.current_token.type in [TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.ORDINAL,
+                                          TokenType.TIME_UNIT, TokenType.SPECIAL]:
             tokens.append(self.current_token)
             self.eat(self.current_token.type)
         return DateSpanNode({'type': 'relative', 'tokens': tokens})

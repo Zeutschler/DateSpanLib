@@ -1,7 +1,9 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from unittest import TestCase
+
 from datespan.date_span import DateSpan
+
 
 class TestDateTextParser(TestCase):
     def test_datespan_parsing(self):

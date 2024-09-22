@@ -1,15 +1,14 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
+import random
 import unittest
 from datetime import datetime, timedelta
+
 from dateutil.relativedelta import relativedelta
-import random
 
-from datespan.parser.datespanparser import DateSpanParser
-from datespan.parser.errors import ParsingError, EvaluationError
 from datespan import DateSpan
-
-
+from datespan.parser.datespanparser import DateSpanParser
+from datespan.parser.errors import EvaluationError
 
 
 class TestDateSpanParser(unittest.TestCase):
@@ -51,7 +50,6 @@ class TestDateSpanParser(unittest.TestCase):
                         self.assertEqual(end.date(), expected_date.date())
                         self.assertEqual(end.time(), datetime.max.time())
 
-
     def test_relative_date_span(self):
         """Test parsing of relative date spans."""
         test_cases = [
@@ -79,13 +77,14 @@ class TestDateSpanParser(unittest.TestCase):
                 # Calculate expected start date
                 # todo: following test values are wrong -> use DateSpan
                 if unit == 'day':
-                    expected = DateSpan.today().full_day.shift_end(days=number) # today - timedelta(days=number)
+                    expected = DateSpan.today().full_day.shift_end(days=number)  # today - timedelta(days=number)
                 elif unit == 'week':
-                    expected = DateSpan.today().full_week.shift_end(weeks=number) # today - timedelta(weeks=number)
+                    expected = DateSpan.today().full_week.shift_end(weeks=number)  # today - timedelta(weeks=number)
                 elif unit == 'month':
-                    expected = DateSpan.today().full_month.shift_end(months=number) # today - relativedelta(months=number)
+                    expected = DateSpan.today().full_month.shift_end(
+                        months=number)  # today - relativedelta(months=number)
                 elif unit == 'year':
-                    expected = DateSpan.today().full_year.shift_end(years=number) # today - relativedelta(years=number)
+                    expected = DateSpan.today().full_year.shift_end(years=number)  # today - relativedelta(years=number)
                 else:
                     continue
                 self.assertEqual(start.date(), expected.start.date(), f"Input: '{input_text}' -> start = ")
@@ -258,7 +257,7 @@ class TestDateSpanParser(unittest.TestCase):
         self.assertEqual(start.date(), yesterday.date())
         # Third statement: last week
         start, end = date_spans[2][0]
-        expected_start = DateSpan.today().shift(days=-7).full_week.start # today - timedelta(weeks=1)
+        expected_start = DateSpan.today().shift(days=-7).full_week.start  # today - timedelta(weeks=1)
         self.assertEqual(start.date(), expected_start.date())
 
     def test_month_names(self):
@@ -350,6 +349,7 @@ class TestDateSpanParser(unittest.TestCase):
         parser = DateSpanParser(input_text)
         with self.assertRaises(EvaluationError):
             parser.parse()
+
 
 # Run the tests
 if __name__ == '__main__':

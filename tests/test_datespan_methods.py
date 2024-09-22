@@ -2,7 +2,9 @@
 
 import unittest
 from datetime import datetime, timedelta, time
+
 from datespan.date_span import DateSpan
+
 
 class TestDateSpan(unittest.TestCase):
 
@@ -12,7 +14,7 @@ class TestDateSpan(unittest.TestCase):
         self.mar = DateSpan(datetime(2023, 3, 1), datetime(2023, 3, 31, 23, 59, 59, 999999))
         self.jan_feb = DateSpan(datetime(2023, 1, 1), datetime(2023, 2, 28, 23, 59, 59, 999999))
         self.jan_feb_mar = DateSpan(datetime(2023, 1, 1), datetime(2023, 3, 31, 23, 59, 59, 999999))
-        self.today = DateSpan.today() # full day
+        self.today = DateSpan.today()  # full day
         self.undef = DateSpan.undefined()
 
     def test_now(self):
@@ -207,6 +209,7 @@ class TestDateSpan(unittest.TestCase):
 
     def test_hash(self):
         self.assertEqual(hash(self.jan), hash((self.jan.start, self.jan.end)))
+
 
 if __name__ == '__main__':
     unittest.main()

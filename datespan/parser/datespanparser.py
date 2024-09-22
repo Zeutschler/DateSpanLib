@@ -1,15 +1,17 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
-from datespan.parser.errors import ParsingError, EvaluationError
+from datespan.parser.errors import ParsingError
 from datespan.parser.evaluator import Evaluator
 from datespan.parser.lexer import Lexer
 from datespan.parser.parser import Parser
+
 
 class DateSpanParser:
     """
     The DateSpanParser class serves as the main interface. It takes an input string,
     tokenizes it, parses the tokens into an AST, and evaluates the AST to produce date spans.
     """
+
     def __init__(self, text):
         self.text = str(text).strip()
         self.lexer = None

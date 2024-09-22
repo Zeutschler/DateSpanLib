@@ -2,8 +2,10 @@
 
 import unittest
 from datetime import datetime
+
 from datespan.date_span import DateSpan
 from datespan.date_span_set import DateSpanSet
+
 
 class TestDateSpanSet(unittest.TestCase):
 
@@ -157,5 +159,3 @@ class TestDateSpanSet(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-

@@ -1,13 +1,14 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 import sys
-from unittest import TestCase
 from datetime import datetime, time
+from unittest import TestCase
+
 import numpy as np
 import pandas as pd
 
-from datespan.date_span_set import DateSpanSet
 from datespan.date_span import DateSpan
+from datespan.date_span_set import DateSpanSet
 
 
 # from datespan.parser_old.en.tokenizer import Tokenizer
@@ -155,7 +156,6 @@ class TestDateTextParser(TestCase):
             "2024-09-10 14:00:00.123456",  # Microseconds
             "from 2024-09-10 14:00:00.123 to 2024-09-10 15:00:00.789",
             "10/09/2024 14:00:00.123456",
-
 
             "between 09/01/2024 and 09/10/2024",
             "from 09.01.2024 to 09.10.2024",

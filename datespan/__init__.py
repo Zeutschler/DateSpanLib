@@ -1,6 +1,7 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from __future__ import annotations
+
 from dateutil.parser import parserinfo
 
 from datespan.date_span import DateSpan
@@ -11,7 +12,6 @@ __version__ = "0.2.3"
 __license__ = "MIT"
 VERSION = __version__
 
-
 __all__ = [
     "DateSpanSet",
     "DateSpan",
@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 
-def parse(datespan_text: str,  parser_info: parserinfo | None = None) -> DateSpanSet:
+def parse(datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet:
     """
     Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects.
 

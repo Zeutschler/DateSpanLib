@@ -1,8 +1,9 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 import sys
+from datetime import datetime, time, timedelta
 from unittest import TestCase
-from datetime import date, datetime, time, timedelta
+
 from datespan.date_span import DateSpan
 
 
@@ -103,11 +104,11 @@ class TestDateSpan(TestCase):
         self.assertEqual(now.full_second,
                          DateSpan(now.start.replace(microsecond=0), now.end.replace(microsecond=999999)))
         self.assertEqual(now.full_minute, DateSpan(now.start.replace(second=0, microsecond=0),
-                                                     now.end.replace(second=59, microsecond=999999)))
+                                                   now.end.replace(second=59, microsecond=999999)))
         self.assertEqual(now.full_hour, DateSpan(now.start.replace(minute=0, second=0, microsecond=0),
-                                                   now.end.replace(minute=59, second=59, microsecond=999999)))
+                                                 now.end.replace(minute=59, second=59, microsecond=999999)))
         self.assertEqual(now.full_day, DateSpan(now.start.replace(hour=0, minute=0, second=0, microsecond=0),
-                                                  now.end.replace(hour=23, minute=59, second=59, microsecond=999999)))
+                                                now.end.replace(hour=23, minute=59, second=59, microsecond=999999)))
         result = now.full_week  # to lazy to write a test, copilot to stupid
         result = now.full_month  # to lazy to write a test, copilot to stupid
         result = now.full_quarter  # to lazy to write a test, copilot to stupid

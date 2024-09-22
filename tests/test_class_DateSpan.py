@@ -2,7 +2,9 @@
 
 import unittest
 from datetime import datetime, timedelta, time
+
 from datespan import DateSpan
+
 
 class TestDateSpan(unittest.TestCase):
 
@@ -169,7 +171,7 @@ class TestDateSpan(unittest.TestCase):
     def test_set_end(self):
         new_end = datetime(2023, 1, 15)
         result = self.jan.set_end(day=15)
-        self.assertEqual(result.end, DateSpan(new_end).full_day.end )
+        self.assertEqual(result.end, DateSpan(new_end).full_day.end)
 
     def test_set(self):
         new_date = datetime(2023, 1, 15)
@@ -213,6 +215,7 @@ class TestDateSpan(unittest.TestCase):
     def test_parse_start_end_text(self):
         result = DateSpan('January 2023', 'March 2023')
         self.assertEqual(result, self.jan_feb_mar)
+
 
 if __name__ == '__main__':
     unittest.main()

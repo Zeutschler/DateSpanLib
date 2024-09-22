@@ -45,7 +45,7 @@ Changelog = "https://github.com/Zeutschler/datespan/CHANGELOG.md"
 pypi = "https://pypi.org/project/datespan/"
 
 [tool.setuptools]
-packages = ["datespan"]
+packages = ["datespan", "datespan.tests"]
 
 [tool.setuptools.dynamic]
 version = {attr = "datespan.__version__"}

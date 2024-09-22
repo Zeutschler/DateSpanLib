@@ -3,6 +3,7 @@
 import re
 
 from dateutil import parser as dateutil_parser
+
 from datespan.parser.errors import ParsingError
 
 
@@ -138,7 +139,7 @@ class Lexer:
         'qtd': 'qtd',
         'wtd': 'wtd',
 
-        'ltm': 'ltm', # last twelve months
+        'ltm': 'ltm',  # last twelve months
 
         'py': 'py',  # previous year
         'cy': 'cy',  # current year
@@ -159,7 +160,7 @@ class Lexer:
     IDENTIFIER_ALIASES = {
         'last': 'last',
 
-        'previous': 'previous', # previous = last
+        'previous': 'previous',  # previous = last
         'prev': 'previous',  # prev = last
         'prv': 'previous',  # prev = last
 
@@ -181,7 +182,7 @@ class Lexer:
         'since': 'since',
         'until': 'until',
         'till': 'until',
-        'up to': 'upto', # not yet implemented
+        'up to': 'upto',  # not yet implemented
 
         'before': 'before',
         'bef': 'before',
@@ -216,7 +217,7 @@ class Lexer:
     # Regular expression for ordinals like '1st', '2nd', '3rd', '4th'
     ORDINAL_PATTERN = r'\b\d+(?:st|nd|rd|th)\b'
 
-    TRIPLET_PATTERN = r'^[rlpn](1000|[1-9][0-9]{0,2})[yqmwd]$' # r3m, l1q, p2w, n4d
+    TRIPLET_PATTERN = r'^[rlpn](1000|[1-9][0-9]{0,2})[yqmwd]$'  # r3m, l1q, p2w, n4d
 
     # Regular expression for times, including optional 'am'/'pm', milliseconds, and microseconds
     TIME_PATTERN = (
@@ -242,19 +243,19 @@ class Lexer:
 
     TOKEN_SPECIFICATION = [
         # Recognize datetime strings with optional 'am'/'pm', milliseconds, microseconds, and timezone
-        ('DATETIME',    DATETIME_PATTERN),
-        ('DATE',        DATE_PATTERN),  # Date strings
-        ('TIME',        TIME_PATTERN),  # Time strings
-        ('ORDINAL',     ORDINAL_PATTERN),  # Ordinal numbers
-        ('NUMBER',      r'\b\d+\b'),  # Integer numbers
-        ('SPECIAL',     r'\b(' + '|'.join(re.escape(k) for k in SPECIAL_WORDS_ALIASES.keys()) + r')\b'), # Special words
-        ('TRIPLET', TRIPLET_PATTERN), # triplet periods, like r3m, r4q, r6y, p2w, n4d
-        ('IDENTIFIER',  r'\b(' + '|'.join(re.escape(k) for k in IDENTIFIER_ALIASES.keys()) + r')\b'),  # Identifiers
-        ('TIME_UNIT',   r'\b(' + '|'.join(re.escape(k) for k in TIME_UNIT_ALIASES.keys()) + r')\b'),  # Time units
-        ('SEMICOLON',   r';'),  # Semicolon to separate statements
+        ('DATETIME', DATETIME_PATTERN),
+        ('DATE', DATE_PATTERN),  # Date strings
+        ('TIME', TIME_PATTERN),  # Time strings
+        ('ORDINAL', ORDINAL_PATTERN),  # Ordinal numbers
+        ('NUMBER', r'\b\d+\b'),  # Integer numbers
+        ('SPECIAL', r'\b(' + '|'.join(re.escape(k) for k in SPECIAL_WORDS_ALIASES.keys()) + r')\b'),  # Special words
+        ('TRIPLET', TRIPLET_PATTERN),  # triplet periods, like r3m, r4q, r6y, p2w, n4d
+        ('IDENTIFIER', r'\b(' + '|'.join(re.escape(k) for k in IDENTIFIER_ALIASES.keys()) + r')\b'),  # Identifiers
+        ('TIME_UNIT', r'\b(' + '|'.join(re.escape(k) for k in TIME_UNIT_ALIASES.keys()) + r')\b'),  # Time units
+        ('SEMICOLON', r';'),  # Semicolon to separate statements
         ('PUNCTUATION', r'[,\-]'),  # Commas and hyphens
-        ('SKIP',        r'\s+'),  # Skip over spaces and tabs
-        ('MISMATCH',    r'.'),  # Any other character
+        ('SKIP', r'\s+'),  # Skip over spaces and tabs
+        ('MISMATCH', r'.'),  # Any other character
     ]
 
     def __init__(self, text):
@@ -270,8 +271,6 @@ class Lexer:
         Tokenizes the input text into a list of Token objects.
         """
 
-
-
         tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in self.TOKEN_SPECIFICATION)
         get_token = re.compile(tok_regex, re.IGNORECASE).match
         pos = 0  # Current position in the text
@@ -282,7 +281,7 @@ class Lexer:
         tokens = []
         for t in str(self.text).split(" "):
             if t.endswith(".") and len(t) > 1:
-                if t[-2].isalpha(): # e.g. 'prev.'
+                if t[-2].isalpha():  # e.g. 'prev.'
                     t = t[:-1]
             tokens.append(t)
         self.text = " ".join(tokens)
@@ -402,6 +401,7 @@ class Token:
     """
     A simple Token structure with type, value, and position information.
     """
+
     def __init__(self, type_, value=None, line=1, column=1):
         self.type = type_
         self.value = value  # The actual value of the token (e.g., 'Monday', '1st')

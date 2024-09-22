@@ -1,9 +1,12 @@
 # datespan - Copyright (c)2024, Thomas Zeutschler, MIT license
 
 from __future__ import annotations
+
 from datetime import datetime, time, timedelta
-from dateutil.relativedelta import relativedelta
+
 from dateutil.relativedelta import MO
+from dateutil.relativedelta import relativedelta
+
 
 class DateSpan:
     """
@@ -19,7 +22,7 @@ class DateSpan:
     MAX_YEAR = datetime.max.year
     """The maximum year that can be represented by the DateSpan."""
 
-    def __init__(self, start = None, end = None, message: str | None = None):
+    def __init__(self, start=None, end=None, message: str | None = None):
         """
         Initializes a new DateSpan with the given start and end date. If only one date is given, the DateSpan will
         represent a single point in time. If no date is given, the DateSpan will be undefined.
@@ -127,7 +130,6 @@ class DateSpan:
 
         return min <= start_diff <= max and min <= end_diff <= max
 
-
     def merge(self, other: DateSpan) -> DateSpan:
         """
         Returns a new DateSpan that is the merge of the DateSpan with the given DateSpan. Merging is only
@@ -148,9 +150,6 @@ class DateSpan:
         if self.is_undefined or other.is_undefined:
             return True
         return self.overlaps_with(other) or self.consecutive_with(other)
-
-
-
 
     def intersect(self, other: DateSpan) -> DateSpan:
         """
@@ -301,7 +300,7 @@ class DateSpan:
         """
         if self.is_undefined:
             return DateSpan(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0),
-                        datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999))
+                            datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999))
 
         return DateSpan(self._start.replace(hour=0, minute=0, second=0, microsecond=0),
                         self._end.replace(hour=23, minute=59, second=59, microsecond=999999))
@@ -350,7 +349,6 @@ class DateSpan:
         return DateSpan(start.replace(hour=0, minute=0, second=0, microsecond=0),
                         end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
-
     @property
     def ltm(self) -> DateSpan:
         """
@@ -371,8 +369,8 @@ class DateSpan:
         """
         if self.is_undefined:
             return DateSpan.today().with_start(DateSpan.today().full_year.start)
-        return DateSpan(start = self.with_start(self.full_year.start).start,
-                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        return DateSpan(start=self.with_start(self.full_year.start).start,
+                        end=self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
     @property
     def mtd(self) -> DateSpan:
@@ -381,9 +379,8 @@ class DateSpan:
         """
         if self.is_undefined:
             return DateSpan.today().with_start(DateSpan.today().full_month.start)
-        return DateSpan(start = self.with_start(self.full_month.start).start,
-                          end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
-
+        return DateSpan(start=self.with_start(self.full_month.start).start,
+                        end=self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
     @property
     def qtd(self) -> DateSpan:
@@ -392,9 +389,8 @@ class DateSpan:
         """
         if self.is_undefined:
             return DateSpan.today().with_start(DateSpan.today().full_quarter.start)
-        return DateSpan(start = self.with_start(self.full_quarter.start).start,
-                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
-
+        return DateSpan(start=self.with_start(self.full_quarter.start).start,
+                        end=self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
     @property
     def wtd(self) -> DateSpan:
@@ -403,8 +399,8 @@ class DateSpan:
         """
         if self.is_undefined:
             return DateSpan.today().with_start(DateSpan.today().full_week.start)
-        return DateSpan(start = self.with_start(self.full_week.start).start,
-                        end = self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
+        return DateSpan(start=self.with_start(self.full_week.start).start,
+                        end=self.end.replace(hour=23, minute=59, second=59, microsecond=999999))
 
     def _begin_of_day(self, dt: datetime) -> datetime:
         """Returns the beginning of the day for the given datetime."""
@@ -697,7 +693,6 @@ class DateSpan:
         """
         return [(self._start, self._end), ]
 
-
     # region Static Days, Month and other calculations
     @classmethod
     def max(cls) -> DateSpan:
@@ -733,12 +728,13 @@ class DateSpan:
         return DateSpan(None, None)
 
     @classmethod
-    def _monday(cls, base: datetime | None = None, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0, offset_days: int = 0) -> DateSpan:
+    def _monday(cls, base: datetime | None = None, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0,
+                offset_days: int = 0) -> DateSpan:
         # Monday is 0 and Sunday is 6
-        if  base is None:
+        if base is None:
             base = datetime.now()
         dtv = base + relativedelta(weekday=MO(-1), years=offset_years,
-                                             months=offset_months, days=offset_days, weeks=offset_weeks)
+                                   months=offset_months, days=offset_days, weeks=offset_weeks)
         return DateSpan(dtv).full_day
 
     @property
@@ -747,7 +743,7 @@ class DateSpan:
         Returns the Monday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Monday will be returned.
         """
-        return self._monday(base = self._start)
+        return self._monday(base=self._start)
 
     @property
     def tuesday(self):
@@ -755,7 +751,7 @@ class DateSpan:
         Returns the Tuesday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Tuesday will be returned.
         """
-        return self._monday(base = self._start).shift(days=1)
+        return self._monday(base=self._start).shift(days=1)
 
     @property
     def wednesday(self):
@@ -763,7 +759,7 @@ class DateSpan:
         Returns the Wednesday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Wednesday will be returned.
         """
-        return self._monday(base = self._start).shift(days=2)
+        return self._monday(base=self._start).shift(days=2)
 
     @property
     def thursday(self):
@@ -771,7 +767,7 @@ class DateSpan:
         Returns the Thursday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Thursday will be returned.
         """
-        return self._monday(base = self._start).shift(days=3)
+        return self._monday(base=self._start).shift(days=3)
 
     @property
     def friday(self):
@@ -779,7 +775,7 @@ class DateSpan:
         Returns the Friday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Friday will be returned.
         """
-        return self._monday(base = self._start).shift(days=4)
+        return self._monday(base=self._start).shift(days=4)
 
     @property
     def saturday(self):
@@ -787,7 +783,7 @@ class DateSpan:
         Returns the Saturday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Saturday will be returned.
         """
-        return self._monday(base = self._start).shift(days=5)
+        return self._monday(base=self._start).shift(days=5)
 
     @property
     def sunday(self):
@@ -795,8 +791,7 @@ class DateSpan:
         Returns the Sunday relative to the week of the start date time of the DateSpan.
         If the DateSpan is undefined, the current week's Sunday will be returned.
         """
-        return self._monday(base = self._start).shift(days=6)
-
+        return self._monday(base=self._start).shift(days=6)
 
     @property
     def january(self):
@@ -917,6 +912,7 @@ class DateSpan:
         if self.is_undefined:
             return DateSpan.now().replace(month=12).full_month
         return self._start.replace(month=12).full_month
+
     # endregion
 
     # region magic methods
@@ -959,7 +955,7 @@ class DateSpan:
 
         start = f"'{self._arg_start}'" if isinstance(self._arg_start, str) else str(self._arg_start)
         end = f"'{self._arg_end}'" if isinstance(self._arg_end, str) else str(self._arg_end)
-        return f"DateSpan({start}, {end})" # -> ('start': {self._start}, 'end': {self._end})"
+        return f"DateSpan({start}, {end})"  # -> ('start': {self._start}, 'end': {self._end})"
 
     def __repr__(self):
         return self.__str__()
@@ -1038,6 +1034,7 @@ class DateSpan:
 
     def __hash__(self):
         return hash((self._start, self._end))
+
     # endregion
 
     # region private methods
@@ -1052,18 +1049,18 @@ class DateSpan:
             self._end = tmp
         return self
 
-    def _parse(self, start, end = None) -> (datetime, datetime):
+    def _parse(self, start, end=None) -> (datetime, datetime):
         """Parse a date span string."""
         if end is None:
             expected_spans = 1
             text = start
         else:
             expected_spans = 2
-            text = f"{start}; {end}" # merge start and end into a single date span statement
+            text = f"{start}; {end}"  # merge start and end into a single date span statement
 
         self._message = None
         try:
-            from datespan.parser.datespanparser import DateSpanParser # overcome circular import
+            from datespan.parser.datespanparser import DateSpanParser  # overcome circular import
             date_span_parser: DateSpanParser = DateSpanParser(text)
             expressions = date_span_parser.parse()  # todo: inject self.parser_info
             if len(expressions) != expected_spans:
