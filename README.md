@@ -29,7 +29,7 @@ dss -= "January"              # Remove the full month of January 2024
 
 print(len(dss))               # returns the number of nonconsecutive DateSpans
 print(dss.to_sql("date"))     # returns an SQL WHERE clause fragment
-print(dss.filter(df, "date")) # returns filtered DataFrame # vectorized filtering of column 'date' of a DataFrame
+print(dss.filter(df, "date")) # returns the DataFrame filtered by column 'date'
 ```
 
 ### Classes
