@@ -7,7 +7,7 @@ import random
 
 from datespan.parser.datespanparser import DateSpanParser
 from datespan.parser.errors import ParsingError, EvaluationError
-from datespan.date_span import DateSpan
+from datespan import DateSpan
 
 
 

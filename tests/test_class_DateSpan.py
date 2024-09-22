@@ -2,7 +2,7 @@
 
 import unittest
 from datetime import datetime, timedelta, time
-from datespan.date_span import DateSpan
+from datespan import DateSpan
 
 class TestDateSpan(unittest.TestCase):
 
