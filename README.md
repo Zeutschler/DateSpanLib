@@ -51,3 +51,11 @@ The 'dataspan' package has been carved out from the
 [CubedPandas](https://github.com/Zeutschler/cubedpandas) project, a library for 
 easy, fast & fun data analysis with Pandas dataframes, as DataSpan serves a broader 
 scope and purpose and can be used independently of CubedPandas. 
+
+### Bugs, Issues, Feature Requests
+Please report any bugs, issues, feature requests, questions or feedback on the
+[GitHub Issues](https://github.com/Zeutschler/datespan/issues) page. It will
+be highly appreciated and will help to improve the package.
+
+### Documentation
+Documentation will be available from 0.3.0 release on. 
