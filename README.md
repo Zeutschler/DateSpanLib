@@ -6,7 +6,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/Zeutschler/datespan?logo=github&logoColor=979DA4&color=A1C547)
 ![unit tests](https://img.shields.io/github/actions/workflow/status/zeutschler/datespan/python-package.yml?logo=GitHub&logoColor=979DA4&label=unit%20tests&color=A1C547)
 ![build](https://img.shields.io/github/actions/workflow/status/zeutschler/datespan/python-package.yml?logo=GitHub&logoColor=979DA4&color=A1C547)
-![codecov](https://codecov.io/github/Zeutschler/datespan/graph/badge.svg?token=B12O0B6F10)
+
 
 -----------------
 A Python package for effortless date span parsing and management. 
