@@ -1,4 +1,4 @@
-# datespan - effortless date span parsing and management
+# datespan
 
 ![GitHub license](https://img.shields.io/github/license/Zeutschler/datespan?color=A1C547)
 ![PyPI version](https://img.shields.io/pypi/v/datespan?logo=pypi&logoColor=979DA4&color=A1C547)
