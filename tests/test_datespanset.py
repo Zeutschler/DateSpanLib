@@ -109,6 +109,7 @@ class TestDateTextParser(TestCase):
 
     def test_advanced(self):
         samples = [
+            "aug 15, 2023 YTD",
             "aug 15, 2023",
             "aug 15th, 2023",
             "June 1st, 2023",

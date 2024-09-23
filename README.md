@@ -21,15 +21,16 @@ import pandas as pd
 from datespan import parse, DateSpan
 df = pd.DataFrame({"date": pd.date_range("2024-01-01", "2024-12-31")})
 
-dss = parse("April 2024 ytd") # Create a DateSpanSet object
-dss.add("May")                # Add a full month of the current year (e.g. 2024 in 2024)
-dss.add("today")              # Add the current day from 00:00:00 to 23:59:59
-dss += "previous week"        # Add a full week from Monday 00:00:00 to Sunday 23:59
-dss -= "January"              # Remove the full month of January 2024
+dss = parse("April 2024 ytd") # Create a DateSpanSet, same as 'DateSpanSet("April 2024 ytd")'
+dss.add("May")                # Add full month May of the current year
+dss.add("today")              # Add the current day from 00:00 to 23:59:59
+dss += "previous week"        # Add a full week from Monday 00:00 to Sunday 23:59:59
+dss -= "January"              # Remove full month January of the current year
 
-print(len(dss))               # returns the number of nonconsecutive DateSpans
+print(len(dss))               # returns the number of contained nonconsecutive DateSpans
+print(dss.to_tuples())        # returns a list of (start, end) tuples representing the DateSpanSet
 print(dss.to_sql("date"))     # returns an SQL WHERE clause fragment
-print(dss.filter(df, "date")) # returns the DataFrame filtered by column 'date'
+print(dss.filter(df, "date")) # returns a DataFrame filtered by the DateSpanSet on column 'date'
 ```
 
 ### Classes
