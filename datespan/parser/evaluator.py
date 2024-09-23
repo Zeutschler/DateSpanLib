@@ -52,7 +52,7 @@ class Evaluator:
         elif node_type == 'relative':
             return self.evaluate_relative(node.value['tokens'])
         elif node_type == 'special':
-            return self.evaluate_special(node.value['value'])
+            return self.evaluate_special(node.value['value'], node=node)
         elif node_type == 'triplet':
             return self.evaluate_triplet(node.value['value'])
         elif node_type == 'months':
@@ -404,7 +404,7 @@ class Evaluator:
                 return self.calculate_this(unit)
             return []
 
-    def evaluate_special(self, value, date_spans: list = None):
+    def evaluate_special(self, value, date_spans: list = None, node = None):
         """
         Evaluates a special date expression and returns the corresponding date span.
         """
@@ -473,8 +473,18 @@ class Evaluator:
 
 
         elif value in ['q1', 'q2', 'q3', 'q4']:
+            year = 0
+            if node is not None and "tokens" in node.value:
+                tokens = node.value["tokens"]
+                if tokens and tokens[-1].type == TokenType.NUMBER: # e.g. 'q1 2024'
+                    year = tokens[-1].value
+                else:  # e.g. 'q1 last year'
+                    result = self.evaluate_relative(node.value['tokens'])
+                    year = result[0][0].year
+
             # Specific quarter
-            year = DateSpan.now().start.year
+            if year == 0:
+                year = DateSpan.now().start.year
             quarter = int(value[1])
             month = 3 * (quarter - 1) + 1
             return DateSpan(datetime(year=year, month=month, day=1)).full_quarter.to_tuple_list()

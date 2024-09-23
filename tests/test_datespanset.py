@@ -109,8 +109,9 @@ class TestDateTextParser(TestCase):
 
     def test_advanced(self):
         samples = [
-            "3rd quarter of 2022",
-            "Q2", "1st quarter",
+            "Q4 last year", "Q3 2022", "3rd quarter of 2022",
+            "Q2",  "June 2022",
+            "1st quarter",
             "from 2024-09-01 to 2024-09-10",
             "ly", "py", "ny", "cy",
             "ltm",
