@@ -17,10 +17,14 @@ class DateSpan:
     """
     TIME_EPSILON_MICROSECONDS = 100_000  # 0.1 seconds
     """The time epsilon in microseconds used for detecting overlapping or consecutive date time spans."""
-    MIN_YEAR = datetime.min.year
-    """The minimum year that can be represented by the DateSpan."""
-    MAX_YEAR = datetime.max.year
-    """The maximum year that can be represented by the DateSpan."""
+
+    # Numpy min := '1677-09-22 00:12:43.145225' ... adjusted to the beginning of the next full year
+    MIN_DATE = datetime(1678, 1, 1, 0, 0, 0, 0)
+    """The Minimum datetime that can be safely represented by a DateSpan. Aligned with the minimum supported datetime of Numpy and Pandas."""
+    # Numpy max := '2262-04-11 23:47:16.854775807' ... adjusted to the end of the previous full year
+    MAX_DATE = datetime(2261, 12, 31, 23, 59, 59, 999999)
+    """The Maximum datetime that can be safely represented by a DateSpan. Aligned with the maximum supported datetime of Numpy and Pandas."""
+
 
     def __init__(self, start=None, end=None, message: str | None = None):
         """
@@ -697,9 +701,9 @@ class DateSpan:
     @classmethod
     def max(cls) -> DateSpan:
         """
-        Returns the maximum possible DateSpan ranging from datetime.min to datetime.max.
+        Returns the maximum possible DateSpan ranging from MIN_DATE to MAX_DATE.
         """
-        return DateSpan(datetime.min, datetime.max)
+        return DateSpan(cls.MIN_DATE, cls.MAX_DATE)
 
     @classmethod
     def now(cls) -> DateSpan:

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from dateutil.parser import parserinfo
 
 from datespan.date_span import DateSpan
 from datespan.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 __license__ = "MIT"
 VERSION = __version__
 
@@ -16,7 +17,7 @@ __all__ = [
     "DateSpanSet",
     "DateSpan",
     "parse",
-    "VERSION"
+    "VERSION",
 ]
 
 

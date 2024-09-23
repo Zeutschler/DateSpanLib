@@ -19,6 +19,7 @@ class DateSpanSet:
     SQL fragments or filter functions for Python, Pandas or others.
     """
 
+
     def __init__(self, definition: Any | None = None, parser_info: parserinfo | None = None):
         """
         Initializes a new DateSpanSet based on a given set of date span set definition.
@@ -40,12 +41,23 @@ class DateSpanSet:
         self._iter_index = 0
 
         if definition is not None:
+            self._initialize(definition)
+
+    def _initialize(self, definition: Any):
+        """
+        Initializes the DateSpanSet based on the given definition.
+        """
+        if definition is not None:
             expressions = []
+
+            # collect available definitions
             if isinstance(definition, DateSpan | str | datetime | time | date):
                 expressions.append(definition)
+
             elif isinstance(definition, DateSpanSet):
                 self._definition = definition._definition
                 expressions.extend(definition._spans)
+
             elif isinstance(definition, list | tuple):
                 definitions = []
                 for item in definition:
@@ -65,6 +77,8 @@ class DateSpanSet:
                     else:
                         raise ValueError(f"Objects of type '{type(item)}' are not supported for DateSpanSet.")
                 self._definition = " + ".join(definitions)
+
+            # parse definitions
             try:
                 for exp in expressions:
                     if isinstance(exp, DateSpan):

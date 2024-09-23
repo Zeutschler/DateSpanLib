@@ -210,12 +210,12 @@ class Evaluator:
             end_date = self.today
         elif keyword == 'from':
             start_date = spans[0][0]
-            end_date = datetime.max
+            end_date = DateSpan.MAX_DATE
         elif keyword == 'after':
             start_date = spans[0][1] + timedelta(microseconds=1)
-            end_date = datetime.max
+            end_date = DateSpan.MAX_DATE
         elif keyword in ['before', 'until']:
-            start_date = datetime.min
+            start_date = DateSpan.MIN_DATE
             end_date = spans[0][0] - timedelta(microseconds=1)
         else:
             raise EvaluationError(
