@@ -537,7 +537,8 @@ class Evaluator:
         Evaluates a list of months, possibly with a year, and returns the corresponding date spans.
         """
         months = []
-        year = self.today.year  # Default to current year
+        year = 0
+        day = 0
         idx = 0
         if not tokens:
             return []
@@ -545,10 +546,30 @@ class Evaluator:
         # check if the last token is a special like 'ytd'
         tokens, special_token = self._extract_special_token(tokens)
 
-        # Check if the last token is a number (year)
+        # Check if the last token is a number (year) -> extract the year and remove it
         if tokens and tokens[-1].type == TokenType.NUMBER:
-            year = tokens[-1].value
-            tokens = tokens[:-1]  # Remove the year from tokens
+            value = tokens[-1].value
+            if DateSpan.MIN_DATE.year <= value <= DateSpan.MAX_DATE.year:
+                year = value
+                tokens = tokens[:-1]
+
+        # Check if the last token is a punctuation (','), e.g. as in 'June 1st, 2024' -> remove it
+        if tokens and tokens[-1].type == TokenType.PUNCTUATION and tokens[-1].value == ',':
+            tokens = tokens[:-1]
+
+        #Check if the last token is an ordinal, e.g. as in 'June 1st, 2024' -> get the day of the month and remove it
+        if tokens and tokens[-1].type == TokenType.ORDINAL:
+            day = self.ordinal_to_int(tokens[-1].value)
+            tokens = tokens[:-1]
+        elif tokens and tokens[-1].type == TokenType.NUMBER:
+            value = tokens[-1].value
+            if 1 <= value <= 31:
+                day = value
+                tokens = tokens[:-1]
+
+        if year == 0:
+            year = self.today.year
+
         while idx < len(tokens):
             token = tokens[idx]
             if token.type == TokenType.IDENTIFIER and token.value in Lexer.MONTH_ALIASES.values():
@@ -559,8 +580,13 @@ class Evaluator:
         for month_name in months:
             # Get the month number from the month name
             month_number = datetime.strptime(month_name[:3], '%b').month
-            from_date = datetime(int(year), month_number, 1)
-            to_date = from_date + relativedelta(months=1, days=-1)
+            if day == 0:
+                from_date = datetime(int(year), month_number, 1)
+                to_date = from_date + relativedelta(months=1, days=-1)
+            else:
+                from_date = datetime(int(year), month_number, day)
+                to_date = from_date
+
             start = datetime.combine(from_date.date(), time.min)
             end = datetime.combine(to_date.date(), time.max)
             date_spans.append((start, end))

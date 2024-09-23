@@ -109,6 +109,9 @@ class TestDateTextParser(TestCase):
 
     def test_advanced(self):
         samples = [
+            "aug 15, 2023",
+            "aug 15th, 2023",
+            "June 1st, 2023",
             "Q4 last year", "Q3 2022", "3rd quarter of 2022",
             "Q2",  "June 2022",
             "1st quarter",

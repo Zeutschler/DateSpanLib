@@ -309,10 +309,14 @@ class Parser:
         Parses a relative date span, such as 'last week' or 'next 3 months'.
         """
         tokens = []
-        while self.current_token.type in [TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.ORDINAL,
+        while True:
+
+            if self.current_token.type in [TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.ORDINAL,
                                           TokenType.TIME_UNIT, TokenType.SPECIAL]:
-            tokens.append(self.current_token)
-            self.eat(self.current_token.type)
+                tokens.append(self.current_token)
+                self.eat(self.current_token.type)
+            else:
+                break
         return DateSpanNode({'type': 'relative', 'tokens': tokens})
 
     def special_date_span(self):
@@ -343,12 +347,21 @@ class Parser:
                 self.eat(TokenType.PUNCTUATION)  # Consume comma or hyphen
             elif self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'and':
                 self.eat(TokenType.IDENTIFIER)
+
         # Optionally consume 'of' and a year
         if self.current_token.type == TokenType.IDENTIFIER and self.current_token.value == 'of':
             self.eat(TokenType.IDENTIFIER)
         if self.current_token.type == TokenType.NUMBER:
-            tokens.append(self.current_token)  # Append the year
+            tokens.append(self.current_token)  # Append a year, month or day number
             self.eat(TokenType.NUMBER)
+            # check for punctuation ',' as in 'Jan 15, 2024'
+            if self.current_token.type == TokenType.PUNCTUATION:
+                if self.next_token.type in [TokenType.NUMBER, TokenType.ORDINAL]:
+                    tokens.append(self.current_token)
+                    self.eat(TokenType.PUNCTUATION)
+                    tokens.append(self.current_token)
+                    self.eat(self.current_token.type)
+
 
         # optional eat trailing time tokens
         if self.current_token.type == TokenType.TIME_UNIT:
