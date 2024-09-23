@@ -323,8 +323,9 @@ class Evaluator:
         """
         idx = 0
         direction = None  # 'last', 'next', 'this', or 'rolling'
-        number = 1  # Default number if not specified
-        unit = 'day'  # Default unit
+        number = None # 1  # Default number if not specified
+        unit = None # 'day'  # Default unit
+        of_unit = None
         ordinal = None
         while idx < len(tokens):
             token = tokens[idx]
@@ -336,10 +337,15 @@ class Evaluator:
                 direction = 'next'
             elif token.type == TokenType.IDENTIFIER and token.value == 'this':
                 direction = 'this'
+            elif token.type == TokenType.IDENTIFIER and token.value == 'of':
+                direction = 'of'
             elif token.type == TokenType.NUMBER:
                 number = token.value
                 if MIN_YEAR <= number <= MAX_YEAR:
-                    unit = 'year'
+                    if direction == 'of':
+                        of_unit = 'year'
+                    else:
+                        unit = 'year'
             elif token.type == TokenType.ORDINAL:
                 ordinal = self.ordinal_to_int(token.value)
             elif token.type == TokenType.TIME_UNIT:
@@ -356,6 +362,13 @@ class Evaluator:
                     return self.evaluate_special(token.value)
             idx += 1
 
+
+        if unit is None:
+            unit = 'day'  # Default to day if unit is not specified
+        if number is None:
+            number = 1  # Default to 1 if number is not specified
+
+
         if direction == 'previous':  # incl. 'last'
             return self.calculate_previous(number, unit)
         if direction == 'rolling':  # incl. 'past'
@@ -364,10 +377,28 @@ class Evaluator:
             return self.calculate_future(number, unit)
         if direction == 'this':
             return self.calculate_this(unit)
+        if direction == 'of':
+            result = self.calculate_nth_in_period(ordinal, unit)
+            start = result[0][0]
+            end = result[0][1]
+            if of_unit == 'year':
+                start = start.replace(year = number)
+                end = end.replace(year = number)
+            elif of_unit == 'month':
+                start = start.replace(month = number)
+                end = end.replace(month = number)
+            elif of_unit == 'day':
+                start = start.replace(day = number)
+                end = end.replace(day = number)
+            elif of_unit == 'quarter':
+                start = start.replace(month= 3 * number - 2)
+                end = end.replace(month= 3 * number)
+
+            return [(start, end)]
 
         if ordinal is not None:
             # Handle expressions like '1st Monday'
-            return self.calculate_nth_weekday_in_period(ordinal, unit)
+            return self.calculate_nth_in_period(ordinal, unit)
         else:  # direction = None
             if unit in ['day', 'week', 'month', 'year', 'quarter']:
                 return self.calculate_this(unit)
@@ -647,50 +678,74 @@ class Evaluator:
         else:
             return []
 
-    def calculate_this(self, unit):
+    def calculate_this(self, unit, ordinal = 0):
         """
         Calculates the date range for the current period specified by the unit (day, week, month, year, quarter).
         """
+        base = DateSpan.now()
+        if ordinal > 0:
+            base = DateSpan(base.ytd.start)
+            if unit == 'day':
+                base = base.shift(days=ordinal - 1)
+            elif unit == 'week':
+                base = base.shift(weeks=ordinal - 1)
+            elif unit == 'month':
+                base = base.shift(months=ordinal - 1)
+            elif unit == 'year':
+                base = base.shift(years=ordinal - 1)
+            elif unit == 'quarter':
+                base = base.shift(months=(ordinal - 1) * 3)
+            elif unit == 'hour':
+                base = base.shift(hours=ordinal - 1)
+            elif unit == 'minute':
+                base = base.shift(minutes=ordinal - 1)
+            elif unit == 'second':
+                base = base.shift(seconds=ordinal - 1)
+
         if unit == 'day':
-            return DateSpan.now().full_day.to_tuple_list()
+            return base.full_day.to_tuple_list()
         elif unit == 'week':
-            return DateSpan.now().full_week.to_tuple_list()
+            return base.full_week.to_tuple_list()
         elif unit == 'month':
-            return DateSpan.now().full_month.to_tuple_list()
+            return base.full_month.to_tuple_list()
         elif unit == 'year':
-            return DateSpan.now().full_year.to_tuple_list()
+            return base.full_year.to_tuple_list()
         elif unit == 'quarter':
-            return DateSpan.now().full_quarter.to_tuple_list()
+            return base.full_quarter.to_tuple_list()
         elif unit == 'hour':
-            return DateSpan.now().full_hour.to_tuple_list()
+            return base.full_hour.to_tuple_list()
         elif unit == 'minute':
-            return DateSpan.now().full_minute.to_tuple_list()
+            return base.full_minute.to_tuple_list()
         elif unit == 'second':
-            return DateSpan.now().full_second.to_tuple_list()
+            return base.full_second.to_tuple_list()
         elif unit == 'millisecond':
-            return DateSpan.now().full_millisecond.to_tuple_list()
+            return base.full_millisecond.to_tuple_list()
         else:
             return []
 
-    def calculate_nth_weekday_in_period(self, n, unit):
+    def calculate_nth_in_period(self, ordinal, unit):
         """
         Calculates the date for the nth weekday in the specified period (e.g., '1st Monday in March').
         """
-        period_spans = self.calculate_this(unit)
+        period_spans = self.calculate_this(unit=unit, ordinal=ordinal)
+
         if not period_spans:
             return []
         period_start = period_spans[0][0]
         period_end = period_spans[0][1]
 
-        # Get the weekday number of today
-        weekday_num = self.today.weekday()
 
-        # Use dateutil.relativedelta to find the nth weekday
-        nth_weekday_date = period_start + relativedelta(day=1, weekday=weekday_num)
+        if unit == 'day':
+            # Get the weekday number of today
+            weekday_num = ordinal - 1  # self.today.weekday()
+            # Use dateutil.relativedelta to find the nth weekday
+            nth_weekday_date = period_start + relativedelta(day=1, weekday=weekday_num)
 
-        if period_start <= nth_weekday_date <= period_end:
-            start = datetime.combine(nth_weekday_date.date(), time.min)
-            end = datetime.combine(nth_weekday_date.date(), time.max)
-            return [(start, end)]
+            if period_start <= nth_weekday_date <= period_end:
+                start = datetime.combine(nth_weekday_date.date(), time.min)
+                end = datetime.combine(nth_weekday_date.date(), time.max)
+                return [(start, end)]
+            else:
+                return []
         else:
-            return []
+            return [(period_start, period_end)]

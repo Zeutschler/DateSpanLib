@@ -45,7 +45,7 @@ class DateSpan:
             class to parse multipart date spans.
         """
         self._arg_start = start
-        self._arg_end = end
+        self._arg_end = end if end is not None else start
         self._message: str | None = message
 
         if isinstance(start, datetime | None) and isinstance(end, datetime | None):

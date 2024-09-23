@@ -109,15 +109,12 @@ class TestDateTextParser(TestCase):
 
     def test_advanced(self):
         samples = [
+            "3rd quarter of 2022",
+            "Q2", "1st quarter",
             "from 2024-09-01 to 2024-09-10",
-            "ly",
-            "py",
-            "ny",
-            "cy",
+            "ly", "py", "ny", "cy",
             "ltm",
-            "r3m",
-            "r42m",
-            "r3w",
+            "r3m", "r42m", "r3w",
             "l4q",
             "this week",
             "last week",
@@ -193,6 +190,7 @@ class TestDateTextParser(TestCase):
                     dss = DateSpanSet.parse(sample)
                     for span in dss:
                         print(f"\t{span}")
+                    pass
                 except Exception as e:
                     print(f"\tError: {e}")
         else:
