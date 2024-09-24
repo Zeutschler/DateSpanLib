@@ -11,6 +11,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -24,7 +25,7 @@ classifiers = [
 readme = "README.md"
 dynamic = ["version"]
 license = {file = "LICENSE"}
-requires-python = ">= 3.10"
+requires-python = ">= 3.9"
 authors = [
   {name = "Thomas Zeutschler"},
   {email = "cubedpandas@gmail.com"},

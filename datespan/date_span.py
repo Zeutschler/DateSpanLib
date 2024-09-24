@@ -26,7 +26,7 @@ class DateSpan:
     """The Maximum datetime that can be safely represented by a DateSpan. Aligned with the maximum supported datetime of Numpy and Pandas."""
 
 
-    def __init__(self, start=None, end=None, message: str | None = None):
+    def __init__(self, start=None, end=None, message: str = None):
         """
         Initializes a new DateSpan with the given start and end date. If only one date is given, the DateSpan will
         represent a single point in time. If no date is given, the DateSpan will be undefined.
@@ -46,12 +46,15 @@ class DateSpan:
         """
         self._arg_start = start
         self._arg_end = end if end is not None else start
-        self._message: str | None = message
+        self._message: str = message
 
-        if isinstance(start, datetime | None) and isinstance(end, datetime | None):
-            self._start: datetime | None = start
-            self._end: datetime | None = end if end is not None else start
+        if isinstance(start, datetime) and isinstance(end, datetime):
+            self._start: datetime = start
+            self._end: datetime = end if end is not None else start
             self._start, self._end = self._swap()
+        elif start is None and end is None:
+            self._start: datetime = None
+            self._end: datetime = None
         else:
             try:
                 self._start, self._end = self._parse(start, end)
@@ -59,7 +62,7 @@ class DateSpan:
                 raise e
 
     @property
-    def message(self) -> str | None:
+    def message(self) -> str:
         """Returns the message of the DateSpan."""
         return self._message
 
@@ -95,7 +98,7 @@ class DateSpan:
             return self._end
         raise IndexError("Index out of range. DateSpan only supports index 0 and 1.")
 
-    def contains(self, other: datetime | DateSpan | float) -> bool:
+    def contains(self, other) -> bool:
         """Returns True if the DateSpan contains the given date, DateSpan or float timestamp."""
         return self.__contains__(other)
 
@@ -168,7 +171,7 @@ class DateSpan:
             return DateSpan(max(self._start, other._start), min(self._end, other._end))
         return DateSpan.undefined()
 
-    def subtract(self, other: DateSpan, allow_split: bool = False) -> DateSpan | (DateSpan, DateSpan):
+    def subtract(self, other: DateSpan, allow_split: bool = False):
         """
         Returns a new DateSpan that is the subtraction of the DateSpan with the given DateSpan.
         If there is no overlap, the DateSpan will be returned unchanged.
@@ -212,7 +215,7 @@ class DateSpan:
         # overlap at the end
         return DateSpan(self._start, other._start - timedelta(microseconds=1))
 
-    def with_time(self, time: datetime | time, text: str | None = None) -> DateSpan:
+    def with_time(self, time, text: str = None) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date set to the given date and time.
         If text is provided, the DateSpan will be adjusted to the time span specified in the text,
@@ -483,9 +486,9 @@ class DateSpan:
         return (self._start == self._begin_of_day(self._start) and
                 self._end == self._end_of_day(self._end))
 
-    def replace(self, year: int | None = None, month: int | None = None, day: int | None = None,
-                hour: int | None = None,
-                minute: int | None = None, second: int | None = None, microsecond: int | None = None) -> DateSpan:
+    def replace(self, year: int = None, month: int = None, day: int = None,
+                hour: int = None,
+                minute: int = None, second: int = None, microsecond: int = None) -> DateSpan:
         """
         Returns a new DateSpan with the start and end date replaced by the given datetime parts.
         """
@@ -592,9 +595,9 @@ class DateSpan:
             return DateSpan(result.start, result.start)
         return result
 
-    def set_start(self, year: int | None = None, month: int | None = None, day: int | None = None,
-                  hour: int | None = None, minute: int | None = None, second: int | None = None,
-                  microsecond: int | None = None, ) -> DateSpan:
+    def set_start(self, year: int = None, month: int = None, day: int = None,
+                  hour: int = None, minute: int = None, second: int = None,
+                  microsecond: int = None, ) -> DateSpan:
         """
         Sets the start date of the DateSpan to a specific time or date. Only the given fragments will be set.
         Invalid day values, e.g. set February to 31st, will be automatically adjusted.
@@ -603,9 +606,9 @@ class DateSpan:
         """
         return DateSpan(self._set(self._start, year, month, day, hour, minute, second, microsecond), self._end)
 
-    def set_end(self, year: int | None = None, month: int | None = None, day: int | None = None,
-                hour: int | None = None, minute: int | None = None, second: int | None = None,
-                microsecond: int | None = None, ) -> DateSpan:
+    def set_end(self, year: int = None, month: int = None, day: int = None,
+                hour: int = None, minute: int = None, second: int = None,
+                microsecond: int = None, ) -> DateSpan:
         """
         Sets the end date of the DateSpan to a specific time or date. Only the given fragments will be set.
         Invalid day values, e.g. set February to 31st, will be automatically adjusted.
@@ -614,9 +617,9 @@ class DateSpan:
         """
         return DateSpan(self._start, self._set(self._end, year, month, day, hour, minute, second, microsecond))
 
-    def set(self, year: int | None = None, month: int | None = None, day: int | None = None,
-            hour: int | None = None, minute: int | None = None, second: int | None = None,
-            microsecond: int | None = None, ) -> DateSpan:
+    def set(self, year: int = None, month: int = None, day: int = None,
+            hour: int = None, minute: int = None, second: int = None,
+            microsecond: int = None, ) -> DateSpan:
         """
         Sets the start and end date of the DateSpan to a specific time or date. Only the given fragments will be set.
         Invalid day values, e.g. set February to 31st, will be automatically adjusted.
@@ -627,9 +630,9 @@ class DateSpan:
         return DateSpan(self._set(self._start, year, month, day, hour, minute, second, microsecond),
                         self._set(self._end, year, month, day, hour, minute, second, microsecond))
 
-    def _set(self, dt: datetime, year: int | None = None, month: int | None = None, day: int | None = None,
-             hour: int | None = None, minute: int | None = None, second: int | None = None,
-             microsecond: int | None = None, ) -> datetime | None:
+    def _set(self, dt: datetime, year: int = None, month: int = None, day: int = None,
+             hour: int = None, minute: int = None, second: int = None,
+             microsecond: int = None, ) -> datetime:
         """
         Sets a datetime to a specific time or date. Only the given fragments will be set.
         Invalid day values, e.g. set February to 31st, will be automatically
@@ -732,7 +735,7 @@ class DateSpan:
         return DateSpan(None, None)
 
     @classmethod
-    def _monday(cls, base: datetime | None = None, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0,
+    def _monday(cls, base: datetime = None, offset_weeks: int = 0, offset_years: int = 0, offset_months: int = 0,
                 offset_days: int = 0) -> DateSpan:
         # Monday is 0 and Sunday is 6
         if base is None:

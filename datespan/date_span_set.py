@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, date, time
-from typing import Any
+from typing import Any, Union
 
 from dateutil.parser import parserinfo
 
@@ -20,7 +20,7 @@ class DateSpanSet:
     """
 
 
-    def __init__(self, definition: Any | None = None, parser_info: parserinfo | None = None):
+    def __init__(self, definition: Any = None, parser_info: parserinfo = None):
         """
         Initializes a new DateSpanSet based on a given set of date span set definition.
         The date span set definition can be a string, a DateSpan, datetime, date or time object or a list of these.
@@ -37,7 +37,7 @@ class DateSpanSet:
         """
         self._spans: list[DateSpan] = []
         self._definition = definition
-        self._parser_info: parserinfo | None = parser_info
+        self._parser_info: parserinfo = parser_info
         self._iter_index = 0
 
         if definition is not None:
@@ -51,14 +51,14 @@ class DateSpanSet:
             expressions = []
 
             # collect available definitions
-            if isinstance(definition, DateSpan | str | datetime | time | date):
+            if isinstance(definition, (DateSpan, str, datetime, time, date)):
                 expressions.append(definition)
 
             elif isinstance(definition, DateSpanSet):
                 self._definition = definition._definition
                 expressions.extend(definition._spans)
 
-            elif isinstance(definition, list | tuple):
+            elif isinstance(definition, (list, tuple)):
                 definitions = []
                 for item in definition:
                     if isinstance(item, DateSpan):
@@ -67,7 +67,7 @@ class DateSpanSet:
                     elif isinstance(item, DateSpanSet):
                         definitions.append(str(item._definition))
                         expressions.extend(item._spans)
-                    elif isinstance(item, datetime | time | date):
+                    elif isinstance(item, (datetime, time, date)):
                         definitions.append(str(item))
                         expressions.append(item)
                     elif isinstance(item, str):
@@ -85,7 +85,7 @@ class DateSpanSet:
                         self._spans.append(exp)
                     elif isinstance(exp, str):
                         self._parse(exp)
-                    elif isinstance(exp, datetime | date | time):
+                    elif isinstance(exp, (datetime, date, time)):
                         self._spans.append(DateSpan(exp))
                     else:
                         raise ValueError(f"Objects of type '{type(exp)}' are not supported for DateSpanSet.")
@@ -198,14 +198,14 @@ class DateSpanSet:
         return self._spans
 
     @property
-    def start(self) -> datetime | None:
+    def start(self) -> datetime:
         """Returns the start datetime of the first DateSpan object in the set."""
         if len(self._spans) > 0:
             return self._spans[0].start
         return None
 
     @property
-    def end(self) -> datetime | None:
+    def end(self) -> datetime:
         """ Returns the end datetime of the last DateSpan object in the set."""
         if len(self._spans) > 0:
             return self._spans[-1].end
@@ -219,13 +219,13 @@ class DateSpanSet:
         dss._parser_info = self._parser_info
         return dss
 
-    def add(self, other: DateSpanSet | DateSpan | str):
+    def add(self, other):
         """ Adds a new DateSpan object to the DateSpanSet."""
         merged = self.merge(other)
         self._spans = merged._spans
         self._definition = merged._definition
 
-    def remove(self, other: DateSpanSet | DateSpan | str):
+    def remove(self, other):
         """ Removes a DateSpan object from the DateSpanSet."""
         self._spans = self.intersect(other)._spans
 
@@ -246,7 +246,7 @@ class DateSpanSet:
 
     # region Class Methods
     @classmethod
-    def parse(cls, datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet:
+    def parse(cls, datespan_text: str, parser_info: parserinfo = None) -> DateSpanSet:
         """
             Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects.
 
@@ -266,7 +266,7 @@ class DateSpanSet:
         return cls(definition=datespan_text, parser_info=parser_info)
 
     @classmethod
-    def try_parse(cls, datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet | None:
+    def try_parse(cls, datespan_text: str, parser_info: parserinfo = None) -> DateSpanSet:
         """
             Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects. If
             the text cannot be parsed, None is returned.
@@ -328,7 +328,7 @@ class DateSpanSet:
             return "OR\n".join(filters)
         return " OR ".join(filters) + inline_comment
 
-    def to_function(self, return_sourceCde: bool = False) -> callable | str:
+    def to_function(self, return_sourceCde: bool = False):
         """
         Generate a compiled Python function that can be directly used as a filter function
         within Python, Pandas or other. The lambda function will return True if the input
@@ -456,7 +456,7 @@ class DateSpanSet:
         """ Returns a list of tuples with start and end dates of all DateSpan objects in the DateSpanSet."""
         return [(ds.start, ds.end) for ds in self._spans]
 
-    def filter(self, data: Any, column: str | None = None, return_mask: bool = False,
+    def filter(self, data: Any, column: str = None, return_mask: bool = False,
                return_index: bool = False) -> Any:
         """
         Filters the given data object, e.g. a Pandas DataFrame or Series, based on the date spans of the DateSpanSet.
@@ -485,31 +485,30 @@ class DateSpanSet:
 
         """
         class_name = f"{data.__class__.__module__}.{data.__class__.__qualname__}"
-        match class_name:
-            case "pandas.core.frame.DataFrame":
-                if column is None:
-                    raise ValueError("A column name must be provided to filter a Pandas DataFrame.")
-                mask = self.to_df_lambda()(data[column])
-                if return_mask:
-                    return mask
-                elif return_index:
-                    return data[mask].index.to_numpy()
-                return data[mask]
+        if class_name == "pandas.core.frame.DataFrame":
+            if column is None:
+                raise ValueError("A column name must be provided to filter a Pandas DataFrame.")
+            mask = self.to_df_lambda()(data[column])
+            if return_mask:
+                return mask
+            elif return_index:
+                return data[mask].index.to_numpy()
+            return data[mask]
 
-            case "pandas.core.series.Series":
-                mask = self.to_df_lambda()(data)
-                if return_mask:
-                    return mask
-                elif return_index:
-                    return data[mask].index.to_numpy()
-                return data[mask]
-            case _:
-                raise ValueError(f"Objects of type '{class_name}' are not yet supported for filtering.")
+        elif class_name == "pandas.core.series.Series":
+            mask = self.to_df_lambda()(data)
+            if return_mask:
+                return mask
+            elif return_index:
+                return data[mask].index.to_numpy()
+            return data[mask]
+        else:
+            raise ValueError(f"Objects of type '{class_name}' are not yet supported for filtering.")
 
     # endregion
 
     # region Set Operations
-    def merge(self, other: DateSpanSet | DateSpan | str) -> DateSpanSet:
+    def merge(self, other) -> DateSpanSet:
         """
         Merges the current DateSpanSet with another DateSpanSet, DateSpan or a string representing a data span.
         The resulting DateSpanSet will contain date spans representing all data spans of the current and the other
@@ -529,7 +528,7 @@ class DateSpanSet:
             return DateSpanSet([self, DateSpanSet(other)])
         raise ValueError(f"Objects of type '{type(other)}' are not supported for DateSpanSet merging.")
 
-    def intersect(self, other: DateSpanSet | DateSpan | str) -> DateSpanSet:
+    def intersect(self, other) -> DateSpanSet:
         """
         Intersects the current DateSpanSet with another DateSpanSet, DateSpan or a string representing a data span.
         The resulting DateSpanSet will contain data spans that represent the current DataSpanSet minus the date spans
@@ -543,7 +542,7 @@ class DateSpanSet:
         """
         raise NotImplementedError()
 
-    def subtract(self, other: DateSpanSet | DateSpan | str) -> DateSpanSet:
+    def subtract(self, other) -> DateSpanSet:
         """
         Subtracts a DateSpanSet, DateSpan or a string representing a data span from the current DateSpanSet.
         So, the resulting DateSpanSet will contain data spans that represent the current DataSpanSet minus
@@ -621,7 +620,7 @@ class DateSpanSet:
 
         self._spans = merged
 
-    def _parse(self, text: str | None = None):
+    def _parse(self, text: str = None):
         """
         Parses the given text into a set of DateSpan objects.
         """

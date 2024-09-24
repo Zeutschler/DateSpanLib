@@ -9,7 +9,7 @@ from datespan.date_span import DateSpan
 from datespan.date_span_set import DateSpanSet
 
 __author__ = "Thomas Zeutschler"
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 __license__ = "MIT"
 VERSION = __version__
 
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-def parse(datespan_text: str, parser_info: parserinfo | None = None) -> DateSpanSet:
+def parse(datespan_text: str, parser_info: parserinfo = None) -> DateSpanSet:
     """
     Creates a new DateSpanSet instance and parses the given text into a set of DateSpan objects.
 
